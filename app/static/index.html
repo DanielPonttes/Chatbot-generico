@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Genérico - Interface de Testes</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f0f1a;
+            --bg-secondary: #1a1a2e;
+            --bg-tertiary: #252540;
+            --text-primary: #e8e8f0;
+            --text-secondary: #a0a0b8;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --user-bubble: linear-gradient(135deg, #6366f1, #8b5cf6);
+            --bot-bubble: #252540;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
+            width: 40px;
+            height: 40px;
+            background: var(--user-bubble);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: var(--bg-tertiary);
+            font-size: 13px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+        }
+
+        .status-dot.online {
+            background: var(--success);
+        }
+
+        .status-dot.offline {
+            background: var(--error);
+        }
+
+        .status-dot.loading {
+            background: var(--warning);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        /* Chat Container */
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding-bottom: 16px;
+        }
+
+        /* Message Bubbles */
+        .message {
+            display: flex;
+            gap: 12px;
+            max-width: 85%;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .message.bot {
+            align-self: flex-start;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .message.user .avatar {
+            background: var(--user-bubble);
+        }
+
+        .message.bot .avatar {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+        }
+
+        .bubble {
+            padding: 14px 18px;
+            border-radius: 16px;
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        .message.user .bubble {
+            background: var(--user-bubble);
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.bot .bubble {
+            background: var(--bot-bubble);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 4px;
+        }
+
+        .bubble .meta {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            opacity: 0.7;
+        }
+
+        /* Typing Indicator */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 8px 0;
+        }
+
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            background: var(--text-secondary);
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+
+            0%,
+            60%,
+            100% {
+                transform: translateY(0);
+                opacity: 0.4;
+            }
+
+            30% {
+                transform: translateY(-4px);
+                opacity: 1;
+            }
+        }
+
+        /* Input Area */
+        .input-area {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 8px;
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .input-area textarea {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            padding: 10px 12px;
+            resize: none;
+            min-height: 44px;
+            max-height: 120px;
+        }
+
+        .input-area textarea::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .send-btn {
+            background: var(--accent);
+            border: none;
+            border-radius: 12px;
+            width: 44px;
+            height: 44px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .send-btn:hover {
+            background: var(--accent-hover);
+            transform: scale(1.05);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .send-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: white;
+        }
+
+        /* Welcome Message */
+        .welcome {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .welcome-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .welcome h2 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .welcome p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 24px;
+        }
+
+        .quick-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 10px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .quick-btn:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        /* Session Info */
+        .session-info {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            padding: 12px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .session-info button {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .session-info button:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <div class="header-left">
+            <div class="logo">🤖</div>
+            <span class="header-title">Chatbot Genérico</span>
+        </div>
+        <div class="status-badge">
+            <span class="status-dot loading" id="statusDot"></span>
+            <span id="statusText">Verificando...</span>
+        </div>
+    </header>
+
+    <main class="chat-container">
+        <div class="messages" id="messages">
+            <div class="welcome" id="welcome">
+                <div class="welcome-icon">💬</div>
+                <h2>Olá! Como posso ajudar?</h2>
+                <p>Sou um chatbot de testes. Faça qualquer pergunta!</p>
+                <div class="quick-actions">
+                    <button class="quick-btn" onclick="sendQuickMessage('Olá, quem é você?')">👋 Apresentação</button>
+                    <button class="quick-btn" onclick="sendQuickMessage('Me explique sobre economia')">📊
+                        Economia</button>
+                    <button class="quick-btn" onclick="sendQuickMessage('Qual é a data de hoje?')">📅 Data</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="session-info">
+            <span title="Clique em 'Nova Sessão' para iniciar uma conversa nova">💬 Conversa ativa</span>
+            <button onclick="newSession()">🔄 Nova Sessão</button>
+            <button onclick="clearMessages()">🗑️ Limpar Chat</button>
+        </div>
+
+        <div class="input-area">
+            <textarea id="messageInput" placeholder="Digite sua mensagem..." rows="1"
+                onkeydown="handleKeyDown(event)"></textarea>
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                <svg viewBox="0 0 24 24">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                </svg>
+            </button>
+        </div>
+    </main>
+
+    <script>
+        // Estado da aplicação
+        let sessionId = generateSessionId();
+        let isLoading = false;
+
+        // Elementos DOM
+        const messagesEl = document.getElementById('messages');
+        const welcomeEl = document.getElementById('welcome');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const sessionIdEl = document.getElementById('sessionId');
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', () => {
+            sessionIdEl.textContent = sessionId.substring(0, 8) + '...';
+            checkHealth();
+            messageInput.focus();
+            autoResizeTextarea();
+        });
+
+        // Gerar ID de sessão
+        function generateSessionId() {
+            return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // Verificar saúde do serviço
+        async function checkHealth() {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+
+                if (data.provider_available) {
+                    statusDot.className = 'status-dot online';
+                    statusText.textContent = `${data.provider} - ${data.model}`;
+                } else {
+                    statusDot.className = 'status-dot offline';
+                    statusText.textContent = 'Offline';
+                }
+            } catch (error) {
+                statusDot.className = 'status-dot offline';
+                statusText.textContent = 'Erro de conexão';
+            }
+        }
+
+        // Auto-resize do textarea
+        function autoResizeTextarea() {
+            messageInput.addEventListener('input', function () {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            });
+        }
+
+        // Lidar com Enter
+        function handleKeyDown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // Enviar mensagem rápida
+        function sendQuickMessage(text) {
+            messageInput.value = text;
+            sendMessage();
+        }
+
+        // Enviar mensagem
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || isLoading) return;
+
+            // Esconder welcome
+            if (welcomeEl) {
+                welcomeEl.style.display = 'none';
+            }
+
+            // Adicionar mensagem do usuário
+            addMessage('user', message);
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+
+            // Mostrar indicador de digitação
+            const typingEl = addTypingIndicator();
+            isLoading = true;
+            sendBtn.disabled = true;
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        message: message,
+                    }),
+                });
+
+                const data = await response.json();
+
+                // Remover indicador de digitação
+                typingEl.remove();
+
+                if (response.ok) {
+                    addMessage('bot', data.reply, `${data.provider} • ${data.model}`);
+                } else {
+                    addMessage('bot', `❌ Erro: ${data.detail?.message || 'Erro desconhecido'}`, 'Erro');
+                }
+            } catch (error) {
+                typingEl.remove();
+                addMessage('bot', `❌ Erro de conexão: ${error.message}`, 'Erro');
+            } finally {
+                isLoading = false;
+                sendBtn.disabled = false;
+                messageInput.focus();
+            }
+        }
+
+        // Adicionar mensagem ao chat
+        function addMessage(type, content, meta = null) {
+            const messageEl = document.createElement('div');
+            messageEl.className = `message ${type}`;
+
+            const avatar = type === 'user' ? '👤' : '🤖';
+
+            let metaHtml = meta ? `<div class="meta">${meta}</div>` : '';
+
+            messageEl.innerHTML = `
+                <div class="avatar">${avatar}</div>
+                <div class="bubble">
+                    ${escapeHtml(content)}
+                    ${metaHtml}
+                </div>
+            `;
+
+            messagesEl.appendChild(messageEl);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+
+            return messageEl;
+        }
+
+        // Adicionar indicador de digitação
+        function addTypingIndicator() {
+            const el = document.createElement('div');
+            el.className = 'message bot';
+            el.innerHTML = `
+                <div class="avatar">🤖</div>
+                <div class="bubble">
+                    <div class="typing-indicator">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            `;
+            messagesEl.appendChild(el);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+            return el;
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML.replace(/\n/g, '<br>');
+        }
+
+        // Nova sessão
+        function newSession() {
+            sessionId = generateSessionId();
+            sessionIdEl.textContent = sessionId.substring(0, 8) + '...';
+            clearMessages();
+        }
+
+        // Limpar mensagens
+        function clearMessages() {
+            messagesEl.innerHTML = '';
+            if (welcomeEl) {
+                messagesEl.appendChild(welcomeEl);
+                welcomeEl.style.display = 'block';
+            }
+        }
+
+        // Verificar saúde periodicamente
+        setInterval(checkHealth, 30000);
+    </script>
+</body>
+
+</html>

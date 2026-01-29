@@ -68,7 +68,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
         history = memory.get_formatted_history(request.session_id)
         
         # Gera resposta
-        reply = await provider.generate(request.message, history)
+        reply = await provider.generate(request.message, history, model_override=request.model_override)
         
         # Salva mensagem do usuário e resposta no histórico
         memory.add_message(request.session_id, "user", request.message)
@@ -76,11 +76,13 @@ async def chat(request: ChatRequest) -> ChatResponse:
         
         logger.info(f"Chat response - session: {request.session_id}, reply length: {len(reply)}")
         
+        used_model = request.model_override if request.model_override else provider.model
+        
         return ChatResponse(
             session_id=request.session_id,
             reply=reply,
             provider=provider.name,
-            model=provider.model,
+            model=used_model,
         )
     
     except ProviderNotAvailableError as e:

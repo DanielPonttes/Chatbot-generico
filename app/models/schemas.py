@@ -25,6 +25,11 @@ class ChatRequest(BaseModel):
         description="Mensagem do usuário para o chatbot",
         examples=["Olá, tudo bem?", "Me explique o que é Python"],
     )
+    
+    model_override: str | None = Field(
+        default=None,
+        description="Nome do modelo específico para esta requisição (ex: gemini-3-pro-preview)",
+    )
 
 
 class PersonaOverride(BaseModel):

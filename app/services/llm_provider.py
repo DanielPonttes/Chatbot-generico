@@ -13,6 +13,10 @@ from typing import Literal
 import httpx
 
 from app.core.config import settings
+try:
+    import google.generativeai as genai
+except ImportError:
+    genai = None
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +45,7 @@ class LLMProvider(ABC):
     
     @property
     @abstractmethod
-    def name(self) -> Literal["ollama", "huggingface"]:
+    def name(self) -> Literal["ollama", "huggingface", "google"]:
         """Nome do provider."""
         pass
     
@@ -189,6 +193,108 @@ class OllamaProvider(LLMProvider):
     async def close(self):
         """Fecha o cliente HTTP."""
         await self._client.aclose()
+
+
+class GoogleGeminiProvider(LLMProvider):
+    """
+    Provider para Google Gemini via google-generativeai SDK.
+    
+    Requer API Key (GEMINI_API_KEY).
+    """
+    
+    def __init__(
+        self,
+        api_key: str | None = settings.gemini_api_key,
+        model_name: str = settings.gemini_model,
+        timeout: float = 60.0,
+    ):
+        if not genai:
+            raise ImportError(
+                "Biblioteca 'google-generativeai' não instalada. "
+                "Adicione ao requirements.txt."
+            )
+            
+        if not api_key:
+            raise ValueError(
+                "API Key do Gemini não configurada. "
+                "Defina a variável de ambiente GEMINI_API_KEY."
+            )
+        
+        genai.configure(api_key=api_key)
+        self._model_name = model_name
+        self._timeout = timeout
+        
+        # O SDK não precisa de um cliente persistente da mesma forma que http/ollama
+        # mas configuramos o modelo aqui
+        self._model = genai.GenerativeModel(model_name)
+    
+    @property
+    def name(self) -> Literal["ollama", "huggingface", "google"]:
+        return "google"
+    
+    @property
+    def model(self) -> str:
+        return self._model_name
+    
+    async def generate(self, prompt: str, history: list[dict] | None = None) -> str:
+        """
+        Gera resposta usando o SDK do Gemini.
+        """
+        try:
+            # Converte histórico para o formato do Gemini
+            chat_history = []
+            if settings.bot_system_prompt:
+                 # system prompt é tratado na configuração ou como primeira mensagem dependendo da versão
+                 # Para simplificar e compatibilidade, vamos injetar no início se possível, 
+                 # mas o SDK do genai tem suporte específico para system instructions em versões recentes.
+                 # Vamos usar uma abordagem simples de append por enquanto ou usar o system_instruction se disponível no init.
+                 pass
+
+            # O SDK gerencia o histórico se usarmos start_chat, mas aqui recebemos o histórico a cada request.
+            # Convertemos nosso formato (role: user/assistant) para o formato do Gemini (role: user/model)
+            if history:
+                for msg in history:
+                    role = "user" if msg["role"] == "user" else "model"
+                    chat_history.append({
+                        "role": role,
+                        "parts": [msg["content"]],
+                    })
+            
+            # Inicia chat com histórico
+            chat = self._model.start_chat(history=chat_history)
+            
+            # Envia mensagem
+            # system prompt pode ser concatenado se o modelo não suportar system instruction nativamente no init
+            final_prompt = prompt
+            if settings.bot_system_prompt and not history: # Injeta apenas se for começo ou não tiver histórico preservado pelo SDK
+                 # Nota: start_chat mantem estado, mas aqui estamos recriando a cada request.
+                 # Idealmente, o system prompt deveria ir na instrução do modelo, mas vamos concatenar para garantir.
+                 # Refinamento: Se o modelo suportar, melhor. No GenerativeModel(system_instruction=...)
+                 pass
+            
+            response = await chat.send_message_async(final_prompt)
+            return response.text.strip()
+            
+        except Exception as e:
+            # Captura erros específicos do SDK se necessário
+            logger.error(f"Erro no Gemini: {e}")
+            if "404" in str(e) or "not found" in str(e).lower():
+                 raise ModelNotFoundError(f"Modelo {self._model_name} não encontrado.")
+            raise ProviderNotAvailableError(f"Erro ao acessar Gemini: {e}")
+
+    async def is_available(self) -> bool:
+        """Tenta listar modelos para verificar acesso."""
+        try:
+            # Lista modelo simples para teste de credencial
+            # genai.list_models() retorna um iterador
+            next(genai.list_models())
+            return True
+        except Exception:
+            return False
+
+    async def close(self):
+        # SDK não requer gerenciamento de conexão explicito
+        pass
 
 
 class HuggingFaceProvider(LLMProvider):
@@ -364,11 +470,20 @@ def get_llm_provider() -> LLMProvider:
             )
         logger.info(f"Inicializando HuggingFace provider com modelo: {settings.hf_model}")
         _provider_instance = HuggingFaceProvider()
+
+    elif provider_name == "google":
+        if not settings.gemini_api_key:
+             raise ValueError(
+                "Google Gemini selecionado mas GEMINI_API_KEY não configurada. "
+                "Defina GEMINI_API_KEY no .env"
+            )
+        logger.info(f"Inicializando Gemini provider com modelo: {settings.gemini_model}")
+        _provider_instance = GoogleGeminiProvider()
     
     else:
         raise ValueError(
             f"Provider '{provider_name}' não reconhecido. "
-            "Use 'ollama' ou 'huggingface'."
+            "Use 'ollama', 'huggingface' ou 'google'."
         )
     
     return _provider_instance

@@ -27,8 +27,8 @@ class Settings(BaseSettings):
     # ==========================================
     # Provider LLM
     # ==========================================
-    llm_provider: Literal["ollama", "huggingface"] = "ollama"
-    """Provider de LLM: 'ollama' (local, gratuito) ou 'huggingface' (API externa)."""
+    llm_provider: Literal["ollama", "huggingface", "google"] = "ollama"
+    """Provider de LLM: 'ollama' (local), 'huggingface' (API), ou 'google' (Gemini)."""
     
     # ==========================================
     # Configurações Ollama
@@ -53,6 +53,15 @@ class Settings(BaseSettings):
     
     hf_model: str = "microsoft/DialoGPT-small"
     """Modelo HuggingFace para inferência via API."""
+    
+    # ==========================================
+    # Configurações Google Gemini
+    # ==========================================
+    gemini_api_key: str | None = None
+    """API Key do Google Gemini."""
+
+    gemini_model: str = "gemini-3-flash-preview"
+    """Modelo Gemini a usar (ex: gemini-1.5-flash, gemini-3-flash-preview)."""
     
     # ==========================================
     # Configurações do Bot

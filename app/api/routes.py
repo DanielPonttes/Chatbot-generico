@@ -16,6 +16,8 @@ from app.models.schemas import (
     ChatResponse,
     HealthResponse,
     ErrorResponse,
+    PersonaResponse,
+    ProactiveChatRequest,
 )
 from app.services.llm_provider import (
     get_llm_provider,
@@ -24,6 +26,7 @@ from app.services.llm_provider import (
     ModelNotFoundError,
 )
 from app.services.memory import get_memory_manager
+from app.services.persona_service import PersonaService
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +121,63 @@ async def chat(request: ChatRequest) -> ChatResponse:
                 "error": "internal_error",
                 "message": "Erro interno ao processar mensagem. Verifique os logs.",
             },
+        )
+
+
+@router.get(
+    "/personas",
+    response_model=list[PersonaResponse],
+    summary="Listar personas disponíveis",
+    description="Retorna a lista de personas para chat proativo.",
+)
+async def list_personas() -> list[PersonaResponse]:
+    """Retorna lista de personas."""
+    personas = PersonaService.get_personas()
+    return [
+        PersonaResponse(id=p.id, name=p.name, description=p.description)
+        for p in personas
+    ]
+
+
+@router.post(
+    "/chat/proactive",
+    response_model=ChatResponse,
+    summary="Gerar mensagem proativa",
+    description="Gera uma mensagem inicial baseada na persona selecionada.",
+)
+async def chat_proactive(request: ProactiveChatRequest) -> ChatResponse:
+    """
+    Gera uma mensagem proativa.
+    
+    Não requer histórico anterior.
+    """
+    try:
+        # Gera mensagem
+        message = await PersonaService.generate_proactive_message(request.persona_id)
+        
+        provider = get_llm_provider()
+        
+        # Para proativo, podemos gerar um session_id novo ou não retornar.
+        # Como o schema exige session_id, vamos gerar um temporário ou deixar vazio se o client
+        # for tratar. Vamos assumir 'proactive-init' por enquanto ou deixar o client definir depois.
+        
+        return ChatResponse(
+            session_id="new-session", # Placeholder
+            reply=message,
+            provider=provider.name,
+            model=provider.model,
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "persona_not_found", "message": str(e)},
+        )
+    except Exception as e:
+        logger.exception(f"Error in proactive chat: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": "internal_error", "message": str(e)},
         )
 
 

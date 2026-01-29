@@ -27,6 +27,13 @@ class ChatRequest(BaseModel):
     )
 
 
+class PersonaOverride(BaseModel):
+    """Override temporário para a persona."""
+    
+    description: str | None = Field(None, description="Nova descrição para a persona")
+    system_prompt: str | None = Field(None, description="Novo system prompt")
+
+
 class ProactiveChatRequest(BaseModel):
     """Request para o endpoint /chat/proactive."""
     
@@ -34,6 +41,17 @@ class ProactiveChatRequest(BaseModel):
         ...,
         description="ID da persona a ser usada",
         examples=["analista", "coach", "amigo"],
+    )
+    
+    persona_override: PersonaOverride | None = Field(
+        default=None,
+        description="Override opcional das configurações da persona",
+    )
+    
+    model_override: str | None = Field(
+        default=None,
+        description="Nome do modelo específico para esta requisição (ex: gemini-3-pro-preview)",
+        examples=["gemini-1.5-pro", "gemini-1.5-flash"],
     )
 
 

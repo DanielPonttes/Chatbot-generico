@@ -152,20 +152,23 @@ async def chat_proactive(request: ProactiveChatRequest) -> ChatResponse:
     Não requer histórico anterior.
     """
     try:
-        # Gera mensagem
-        message = await PersonaService.generate_proactive_message(request.persona_id)
+        # Gera mensagem com overrides
+        message = await PersonaService.generate_proactive_message(
+            request.persona_id, 
+            persona_override=request.persona_override,
+            model_override=request.model_override
+        )
         
         provider = get_llm_provider()
         
-        # Para proativo, podemos gerar um session_id novo ou não retornar.
-        # Como o schema exige session_id, vamos gerar um temporário ou deixar vazio se o client
-        # for tratar. Vamos assumir 'proactive-init' por enquanto ou deixar o client definir depois.
+        # Identifica o modelo usado
+        used_model = request.model_override if request.model_override else provider.model
         
         return ChatResponse(
             session_id="new-session", # Placeholder
             reply=message,
             provider=provider.name,
-            model=provider.model,
+            model=used_model,
         )
 
     except ValueError as e:

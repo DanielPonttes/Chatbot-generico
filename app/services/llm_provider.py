@@ -56,7 +56,7 @@ class LLMProvider(ABC):
         pass
     
     @abstractmethod
-    async def generate(self, prompt: str, history: list[dict] | None = None) -> str:
+    async def generate(self, prompt: str, history: list[dict] | None = None, model_override: str | None = None) -> str:
         """
         Gera uma resposta para o prompt dado.
         
@@ -111,7 +111,7 @@ class OllamaProvider(LLMProvider):
     def model(self) -> str:
         return self._model_name
     
-    async def generate(self, prompt: str, history: list[dict] | None = None) -> str:
+    async def generate(self, prompt: str, history: list[dict] | None = None, model_override: str | None = None) -> str:
         """
         Gera resposta usando a API do Ollama.
         
@@ -137,11 +137,17 @@ class OllamaProvider(LLMProvider):
             "content": prompt,
         })
         
+        # Usa o modelo override se fornecido, caso contrário usa o padrão
+        target_model = model_override if model_override else self._model_name
+
+        if model_override:
+            logger.info(f"Usando modelo override no Ollama: {model_override}")
+        
         try:
             response = await self._client.post(
                 f"{self._base_url}/api/chat",
                 json={
-                    "model": self._model_name,
+                    "model": target_model,
                     "messages": messages,
                     "stream": False,  # Resposta completa de uma vez
                 },
@@ -149,8 +155,8 @@ class OllamaProvider(LLMProvider):
             
             if response.status_code == 404:
                 raise ModelNotFoundError(
-                    f"Modelo '{self._model_name}' não encontrado. "
-                    f"Execute: ollama pull {self._model_name}"
+                    f"Modelo '{target_model}' não encontrado. "
+                    f"Execute: ollama pull {target_model}"
                 )
             
             response.raise_for_status()
@@ -236,11 +242,17 @@ class GoogleGeminiProvider(LLMProvider):
     def model(self) -> str:
         return self._model_name
     
-    async def generate(self, prompt: str, history: list[dict] | None = None) -> str:
+    async def generate(self, prompt: str, history: list[dict] | None = None, model_override: str | None = None) -> str:
         """
         Gera resposta usando o SDK do Gemini.
         """
         try:
+            # Decide qual modelo usar
+            if model_override:
+                logger.info(f"Usando modelo override no Gemini: {model_override}")
+                active_model = genai.GenerativeModel(model_override)
+            else:
+                active_model = self._model
             # Converte histórico para o formato do Gemini
             chat_history = []
             if settings.bot_system_prompt:
@@ -261,7 +273,7 @@ class GoogleGeminiProvider(LLMProvider):
                     })
             
             # Inicia chat com histórico
-            chat = self._model.start_chat(history=chat_history)
+            chat = active_model.start_chat(history=chat_history)
             
             # Envia mensagem
             # system prompt pode ser concatenado se o modelo não suportar system instruction nativamente no init
@@ -338,7 +350,7 @@ class HuggingFaceProvider(LLMProvider):
     def model(self) -> str:
         return self._model_name
     
-    async def generate(self, prompt: str, history: list[dict] | None = None) -> str:
+    async def generate(self, prompt: str, history: list[dict] | None = None, model_override: str | None = None) -> str:
         """
         Gera resposta usando a API de Inferência do HuggingFace.
         

@@ -120,6 +120,11 @@ async def root():
     """Serve a interface de testes."""
     return FileResponse(STATIC_DIR / "index.html")
 
+@app.get("/notifications", include_in_schema=False)
+async def notifications_page():
+    """Serve a interface de testes de notificações."""
+    return FileResponse(STATIC_DIR / "notifications.html")
+
 
 # ==========================================
 # Execução direta (opcional)

@@ -64,9 +64,14 @@ class PersonaService:
         return None
 
     @staticmethod
-    async def generate_proactive_message(persona_id: str) -> str:
+    async def generate_proactive_message(persona_id: str, persona_override: Optional[object] = None, model_override: Optional[str] = None) -> str:
         """
         Gera uma mensagem proativa baseada na persona escolhida.
+        
+        Args:
+            persona_id: ID da persona.
+            persona_override: Objeto com description e system_prompt opcionais.
+            model_override: Nome do modelo para usar.
         """
         persona = PersonaService.get_persona_by_id(persona_id)
         if not persona:
@@ -74,18 +79,27 @@ class PersonaService:
         
         provider = get_llm_provider()
         
+        # Define o system prompt base
+        system_prompt = persona.system_prompt
+        
+        # Aplica o override se fornecido
+        if persona_override:
+            if getattr(persona_override, 'system_prompt', None):
+                system_prompt = persona_override.system_prompt
+            
+            # Se a descrição mudar, podemos querer incluí-la no prompt também, 
+            # mas simplificando usaremos apenas o system_prompt do override se dado.
+        
         # Cria um prompt específico para gerar a mensagem inicial
-        # Note que não passamos histórico, pois é o início de uma interação
         prompt = (
-            f"Atue com a seguinte persona:\n{persona.system_prompt}\n\n"
+            f"Atue com a seguinte persona:\n{system_prompt}\n\n"
             "Gere uma mensagem curta (máximo 2 frases) para iniciar uma conversa com o usuário proativamente. "
             "Não use 'Olá' ou 'Oi' genéricos, vá direto ao ponto no seu estilo."
         )
         
         try:
-            # Reutilizamos o método generate do provider
-            # Passamos um histórico vazio ou None
-            message = await provider.generate(prompt)
+            # Reutilizamos o método generate do provider com override de modelo se houver
+            message = await provider.generate(prompt, model_override=model_override)
             return message
         except Exception as e:
             logger.error(f"Erro ao gerar mensagem proativa para {persona_id}: {e}")

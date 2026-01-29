@@ -27,6 +27,24 @@ class ChatRequest(BaseModel):
     )
 
 
+class ProactiveChatRequest(BaseModel):
+    """Request para o endpoint /chat/proactive."""
+    
+    persona_id: str = Field(
+        ...,
+        description="ID da persona a ser usada",
+        examples=["analista", "coach", "amigo"],
+    )
+
+
+class PersonaResponse(BaseModel):
+    """Modelo de persona para listagem."""
+    
+    id: str
+    name: str
+    description: str
+
+
 class ChatResponse(BaseModel):
     """Response do endpoint /chat."""
     
@@ -38,7 +56,7 @@ class ChatResponse(BaseModel):
         ...,
         description="Resposta gerada pelo chatbot",
     )
-    provider: Literal["ollama", "huggingface"] = Field(
+    provider: Literal["ollama", "huggingface", "google"] = Field(
         ...,
         description="Provider LLM usado para gerar a resposta",
     )

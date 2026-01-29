@@ -17,6 +17,7 @@ from app.models.schemas import (
     HealthResponse,
     ErrorResponse,
     PersonaResponse,
+    TargetProfileResponse,
     ProactiveChatRequest,
 )
 from app.services.llm_provider import (
@@ -141,6 +142,21 @@ async def list_personas() -> list[PersonaResponse]:
     ]
 
 
+@router.get(
+    "/target-profiles",
+    response_model=list[TargetProfileResponse],
+    summary="Listar perfis de usuários alvo",
+    description="Retorna a lista de perfis de usuários para contexto da notificação.",
+)
+async def list_target_profiles() -> list[TargetProfileResponse]:
+    """Retorna lista de perfis alvo."""
+    profiles = PersonaService.get_target_profiles()
+    return [
+        TargetProfileResponse(id=p.id, name=p.name, description=p.description)
+        for p in profiles
+    ]
+
+
 @router.post(
     "/chat/proactive",
     response_model=ChatResponse,
@@ -157,6 +173,7 @@ async def chat_proactive(request: ProactiveChatRequest) -> ChatResponse:
         # Gera mensagem com overrides
         message = await PersonaService.generate_proactive_message(
             request.persona_id, 
+            target_profile_id=request.target_profile_id,
             persona_override=request.persona_override,
             model_override=request.model_override
         )

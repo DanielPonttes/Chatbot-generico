@@ -96,18 +96,36 @@
             <!-- Action Area -->
             <div class="glass-panel p-6 rounded-2xl flex flex-col items-center gap-6">
 
-                <div class="flex items-center gap-4 w-full justify-center">
-                    <div class="relative w-64">
-                        <select id="personaSelect"
-                            class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-4 py-2.5 appearance-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none cursor-pointer">
-                            <!-- Populated via JS -->
-                        </select>
-                        <i data-lucide="chevron-down"
-                            class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none"></i>
+                <div class="flex flex-col gap-6 w-full px-12">
+
+                    <!-- Bot Persona (System Prompt) -->
+                    <div class="flex flex-col gap-2">
+                        <label class="text-sm font-medium text-slate-300">Estilo do Bot (Persona)</label>
+                        <div class="relative w-full">
+                            <select id="personaSelect"
+                                class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-4 py-2.5 appearance-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none cursor-pointer">
+                                <!-- Populated via JS -->
+                            </select>
+                            <i data-lucide="chevron-down"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none"></i>
+                        </div>
+                    </div>
+
+                    <!-- Target User Profile -->
+                    <div class="flex flex-col gap-2">
+                        <label class="text-sm font-medium text-slate-300">Perfil do Usuário Alvo</label>
+                        <div class="relative w-full">
+                            <select id="targetProfileSelect"
+                                class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-4 py-2.5 appearance-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none cursor-pointer">
+                                <!-- Populated via JS -->
+                            </select>
+                            <i data-lucide="chevron-down"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none"></i>
+                        </div>
                     </div>
 
                     <button id="generateBtn"
-                        class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-lg font-medium transition-all shadow-lg shadow-indigo-500/20 active:scale-95 flex items-center gap-2">
+                        class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-lg font-medium transition-all shadow-lg shadow-indigo-500/20 active:scale-95 flex items-center gap-2 justify-center mt-2">
                         <i data-lucide="sparkles" class="w-4 h-4"></i>
                         Gerar Notificação
                     </button>
@@ -220,6 +238,7 @@
 
         // Elements
         const personaSelect = document.getElementById('personaSelect');
+        const targetProfileSelect = document.getElementById('targetProfileSelect');
         const generateBtn = document.getElementById('generateBtn');
         const notificationArea = document.getElementById('notificationArea');
         const loadingState = document.getElementById('loadingState');
@@ -242,23 +261,34 @@
             personaPrompt: ""
         };
 
-        // Load Personas
-        async function loadPersonas() {
+        // Load Data
+        async function loadData() {
             try {
-                const res = await fetch('/personas');
-                const data = await res.json();
-                personaSelect.innerHTML = data.map(p =>
-                    `<option value="${p.id}">${p.name}</option>`
+                // Load Personas (Bot Styles)
+                const resPersonas = await fetch('/personas');
+                const personas = await resPersonas.json();
+                personaSelect.innerHTML = personas.map(p =>
+                    `<option value="${p.id}">${p.name} - ${p.description}</option>`
                 ).join('');
+
+                // Load Target Profiles
+                const resProfiles = await fetch('/target-profiles');
+                const profiles = await resProfiles.json();
+                targetProfileSelect.innerHTML = profiles.map(p =>
+                    `<option value="${p.id}">${p.name} - ${p.description}</option>`
+                ).join('');
+
             } catch (e) {
-                console.error("Erro ao carregar personas", e);
+                console.error("Erro ao carregar dados", e);
             }
         }
-        loadPersonas();
+        loadData();
 
         // Generate Notification
         generateBtn.addEventListener('click', async () => {
             const personaId = personaSelect.value;
+            const targetProfileId = targetProfileSelect.value;
+
             if (!personaId) return;
 
             // UI Updates
@@ -270,6 +300,7 @@
             try {
                 const payload = {
                     persona_id: personaId,
+                    target_profile_id: targetProfileId || null,
                     model_override: config.modelOverride || null,
                     persona_override: config.personaPrompt ? {
                         system_prompt: config.personaPrompt
@@ -288,7 +319,8 @@
 
                 // Show Result
                 notifContent.textContent = data.reply;
-                notifPersonaName.textContent = config.personaPrompt ? "Persona Customizada" : personaSelect.options[personaSelect.selectedIndex].text;
+                const personaName = personaSelect.options[personaSelect.selectedIndex].text.split(' - ')[0];
+                notifPersonaName.textContent = config.personaPrompt ? "Persona Customizada" : personaName;
                 modelUsedTag.textContent = `Modelo: ${data.model}`;
 
                 notificationArea.classList.remove('hidden');

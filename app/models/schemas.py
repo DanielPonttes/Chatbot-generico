@@ -44,8 +44,14 @@ class ProactiveChatRequest(BaseModel):
     
     persona_id: str = Field(
         ...,
-        description="ID da persona a ser usada",
-        examples=["analista", "coach", "amigo"],
+        description="ID da persona a ser usada (tom do bot)",
+        examples=["provocador", "motivador", "debochado"],
+    )
+    
+    target_profile_id: str | None = Field(
+        default=None,
+        description="ID do perfil do usuário alvo (contexto)",
+        examples=["gastao", "indiferente", "engajado"],
     )
     
     persona_override: PersonaOverride | None = Field(
@@ -62,6 +68,14 @@ class ProactiveChatRequest(BaseModel):
 
 class PersonaResponse(BaseModel):
     """Modelo de persona para listagem."""
+    
+    id: str
+    name: str
+    description: str
+
+
+class TargetProfileResponse(BaseModel):
+    """Modelo de perfil de usuário alvo para listagem."""
     
     id: str
     name: str

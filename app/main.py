@@ -53,6 +53,8 @@ async def lifespan(app: FastAPI):
     if settings.llm_provider == "ollama":
         logger.info(f"   Modelo: {settings.ollama_model}")
         logger.info(f"   Ollama URL: {settings.ollama_base_url}")
+    elif settings.llm_provider == "google":
+        logger.info(f"   Modelo: {settings.gemini_model}")
     else:
         logger.info(f"   Modelo: {settings.hf_model}")
     logger.info(f"   Memória: {'SQLite' if settings.use_sqlite else 'RAM'}")

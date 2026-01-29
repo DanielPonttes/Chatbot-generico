@@ -17,37 +17,69 @@ class Persona:
     description: str
     system_prompt: str
 
-# Configuração das 3 personas iniciais
+@dataclass
+class TargetProfile:
+    id: str
+    name: str
+    description: str
+    context: str
+
+# Configuração das 3 personas (tons) do Bot
 PERSONAS = [
     Persona(
-        id="analista",
-        name="Analista Financeiro",
-        description="Focado em dados, investimentos e economia sustentável.",
+        id="provocador",
+        name="Provocador",
+        description="Usa ironia leve e desafios para estimular a ação.",
         system_prompt=(
-            "Você é um Analista Financeiro sênior. Seu tom é formal, objetivo e baseado em dados. "
-            "Você foca em ROI, economia de longo prazo e estratégias de investimento. "
-            "Ao iniciar uma conversa proativamente, sugira uma análise de gastos ou uma oportunidade de economia."
+            "Você é um chatbot com personalidade Provocadora sobre eficiência energética. "
+            "Seu tom é desafiador, levemente irônico e questionador. "
+            "Você não dá tapinha nas costas; você desafia o usuário a provar que consegue economizar. "
+            "Use frases curtas e instigantes."
         )
     ),
     Persona(
-        id="coach",
-        name="Coach Motivacional",
-        description="Energético e focado em mudança de hábitos e mindset.",
+        id="motivador",
+        name="Motivador",
+        description="Positivo, encorajador e focado em metas.",
         system_prompt=(
-            "Você é um Coach Motivacional financeiro. Seu tom é inspirador, cheio de energia e encorajador. "
-            "Você foca em mudança de mindset, metas alcançáveis e celebração de pequenas vitórias. "
-            "Ao iniciar uma conversa proativamente, mande uma mensagem motivacional para foco financeiro."
+            "Você é um chatbot Motivador e entusiasta da eficiência energética. "
+            "Seu tom é extremamente positivo, encorajador e vibrante. "
+            "Você celebra qualquer esforço e foca no impacto positivo para o planeta e para o bolso. "
+            "Use emojis e linguagem inspiradora."
         )
     ),
     Persona(
-        id="amigo",
-        name="Amigo Pragmático",
-        description="Casual, direto e focado em dicas práticas do dia a dia.",
+        id="debochado",
+        name="Debochado",
+        description="Humor ácido e sarcástico, focado no absurdo do desperdício.",
         system_prompt=(
-            "Você é aquele amigo que entende de dinheiro mas fala a língua do povo. Seu tom é casual, direto e sem jargões difíceis. "
-            "Você foca em 'hacks' de economia, descontos e dicas rápidas. "
-            "Ao iniciar uma conversa proativamente, mande uma dica rápida ou pergunte se sobrou dinheiro do fim de semana."
+            "Você é um chatbot Debochado que não acredita no quanto as pessoas desperdiçam dinheiro/energia à toa. "
+            "Seu tom é sarcástico, ácido e informal. "
+            "Você faz piada com o desperdício e trata a economia como algo óbvio que o usuário está 'lentamente' percebendo. "
+            "Use gírias e humor."
         )
+    )
+]
+
+# Configuração dos 3 perfis de usuários alvo
+TARGET_PROFILES = [
+    TargetProfile(
+        id="gastao",
+        name="O Gastão Sem Noção",
+        description="Não economiza e não tem consciência.",
+        context="O usuário desperdiça muita energia, deixa luzes acesas, banhos longos e não parece se importar com a conta ou o meio ambiente."
+    ),
+    TargetProfile(
+        id="indiferente",
+        name="O Indiferente",
+        description="Ignora mensagens e não interage.",
+        context="O usuário recebe várias notificações mas nunca abre o app. Ele ignora os avisos e continua com seus hábitos, tratando o bot como ruído."
+    ),
+    TargetProfile(
+        id="engajado",
+        name="O Engajado",
+        description="Interage e busca economia.",
+        context="O usuário já economiza, interage sempre com o app e busca novas formas de otimizar. Ele é um parceiro na missão de eficiência."
     )
 ]
 
@@ -64,18 +96,46 @@ class PersonaService:
         return None
 
     @staticmethod
-    async def generate_proactive_message(persona_id: str, persona_override: Optional[object] = None, model_override: Optional[str] = None) -> str:
+    def get_target_profiles() -> List[TargetProfile]:
+        return TARGET_PROFILES
+
+    @staticmethod
+    def get_target_profile_by_id(profile_id: str) -> Optional[TargetProfile]:
+        for profile in TARGET_PROFILES:
+            if profile.id == profile_id:
+                return profile
+        return None
+
+    @staticmethod
+    async def generate_proactive_message(
+        persona_id: str, 
+        target_profile_id: Optional[str] = None,
+        persona_override: Optional[object] = None, 
+        model_override: Optional[str] = None
+    ) -> str:
         """
-        Gera uma mensagem proativa baseada na persona escolhida.
+        Gera uma mensagem proativa baseada na persona escolhida e no perfil do usuário alvo.
         
         Args:
-            persona_id: ID da persona.
+            persona_id: ID da persona (tom do bot).
+            target_profile_id: ID do perfil do usuário alvo (opcional).
             persona_override: Objeto com description e system_prompt opcionais.
             model_override: Nome do modelo para usar.
         """
         persona = PersonaService.get_persona_by_id(persona_id)
         if not persona:
             raise ValueError(f"Persona '{persona_id}' não encontrada.")
+            
+        target_context = ""
+        if target_profile_id:
+            target_profile = PersonaService.get_target_profile_by_id(target_profile_id)
+            if target_profile:
+                target_context = (
+                    f"\nCONTEXTO DO USUÁRIO ALVO:\n"
+                    f"Nome do Perfil: {target_profile.name}\n"
+                    f"Descrição: {target_profile.context}\n"
+                    "Adapte sua mensagem especificamente para este tipo de usuário, tentando engajá-lo da melhor forma possível dado o seu comportamento."
+                )
         
         provider = get_llm_provider()
         
@@ -86,15 +146,12 @@ class PersonaService:
         if persona_override:
             if getattr(persona_override, 'system_prompt', None):
                 system_prompt = persona_override.system_prompt
-            
-            # Se a descrição mudar, podemos querer incluí-la no prompt também, 
-            # mas simplificando usaremos apenas o system_prompt do override se dado.
         
         # Cria um prompt específico para gerar a mensagem inicial
         prompt = (
-            f"Atue com a seguinte persona:\n{system_prompt}\n\n"
-            "Gere uma mensagem curta (máximo 2 frases) para iniciar uma conversa com o usuário proativamente. "
-            "Não use 'Olá' ou 'Oi' genéricos, vá direto ao ponto no seu estilo."
+            f"Atue com a seguinte persona:\n{system_prompt}\n{target_context}\n\n"
+            "Gere uma notificação curta (push notification) de 1 a 2 frases para o celular do usuário. "
+            "Seja direto e mantenha sua personalidade intrínseca."
         )
         
         try:

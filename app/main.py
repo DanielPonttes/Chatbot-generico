@@ -125,6 +125,11 @@ async def notifications_page():
     """Serve a interface de testes de notificações."""
     return FileResponse(STATIC_DIR / "notifications.html")
 
+@app.get("/rag", include_in_schema=False)
+async def rag_dashboard_page():
+    """Serve o visualizador do RAG."""
+    return FileResponse(STATIC_DIR / "rag.html")
+
 
 # ==========================================
 # Execução direta (opcional)

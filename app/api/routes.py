@@ -19,6 +19,8 @@ from app.models.schemas import (
     PersonaResponse,
     TargetProfileResponse,
     ProactiveChatRequest,
+    RAGSearchRequest,
+    RAGSearchResponse,
 )
 from app.services.llm_provider import (
     get_llm_provider,
@@ -28,6 +30,7 @@ from app.services.llm_provider import (
 )
 from app.services.memory import get_memory_manager
 from app.services.persona_service import PersonaService
+from app.rag.retriever import search_with_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -245,6 +248,44 @@ async def health() -> HealthResponse:
     
     except ValueError as e:
         # Provider não pode ser criado (ex: HF sem token)
+        return HealthResponse(
+            status="unhealthy",
+            provider=settings.llm_provider,
+            model=settings.ollama_model if settings.llm_provider == "ollama" else settings.hf_model,
+            provider_available=False,
+            message=str(e),
+        )
+    
+    except Exception as e:
+        logger.exception(f"Error in health check: {e}")
+        return HealthResponse(
+            status="unhealthy",
+            provider=settings.llm_provider,
+            model="unknown",
+            provider_available=False,
+            message=f"Erro ao verificar status: {e}",
+        )
+
+@router.post(
+    "/rag/search",
+    response_model=RAGSearchResponse,
+    summary="Buscar no RAG",
+    description="Pesquisa diretamente na base de conhecimento vetorial (PDFs).",
+)
+async def semantic_search(request: RAGSearchRequest) -> RAGSearchResponse:
+    """Pesquisa vetorial crua para o Frontend Visualizador."""
+    try:
+        results = search_with_metadata(request.query, k=request.k)
+        return RAGSearchResponse(
+            results=results,
+            query_echo=request.query
+        )
+    except Exception as e:
+        logger.exception(f"Erro na busca RAG: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": "rag_search_error", "message": str(e)},
+        )
         return HealthResponse(
             status="unhealthy",
             provider=settings.llm_provider,

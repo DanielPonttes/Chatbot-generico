@@ -66,6 +66,35 @@ class ProactiveChatRequest(BaseModel):
     )
 
 
+class RAGSearchRequest(BaseModel):
+    """Request para teste direto do RAG /rag/search."""
+    
+    query: str = Field(
+        ...,
+        min_length=1,
+        max_length=1000,
+        description="Termo ou pergunta a ser buscada na base vetorial",
+    )
+    k: int = Field(
+        default=4,
+        ge=1,
+        le=10,
+        description="Número de chunks a retornar"
+    )
+
+class RAGSearchResult(BaseModel):
+    """Unidade do resultado do RAG com Metadados."""
+    content: str
+    source: str
+    page: int
+    score: float
+
+class RAGSearchResponse(BaseModel):
+    """Response do /rag/search."""
+    results: list[RAGSearchResult]
+    query_echo: str
+
+
 class PersonaResponse(BaseModel):
     """Modelo de persona para listagem."""
     

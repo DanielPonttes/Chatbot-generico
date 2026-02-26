@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from app.services.llm_provider import get_llm_provider, LLMProviderError
+from app.rag.retriever import get_relevant_context
 
 logger = logging.getLogger(__name__)
 
@@ -146,10 +147,23 @@ class PersonaService:
         if persona_override:
             if getattr(persona_override, 'system_prompt', None):
                 system_prompt = persona_override.system_prompt
-        
+                
+        # Busca contexto no RAG
+        rag_query = f"Dicas de eficiência energética, economia e conscientização sustentável."
+        rag_context = ""
+        try:
+            retrieved_docs = get_relevant_context(rag_query, k=3)
+            if retrieved_docs:
+                rag_context = (
+                    f"\nUse as seguintes informações reais recuperadas da base de conhecimento para dar mais embasamento à sua mensagem:\n"
+                    f"<BASE_DE_CONHECIMENTO>\n{retrieved_docs}\n</BASE_DE_CONHECIMENTO>\n"
+                )
+        except Exception as e:
+            logger.error(f"Erro ao buscar contexto RAG (ignorando): {e}")
+
         # Cria um prompt específico para gerar a mensagem inicial
         prompt = (
-            f"Atue com a seguinte persona:\n{system_prompt}\n{target_context}\n\n"
+            f"Atue com a seguinte persona:\n{system_prompt}\n{target_context}\n{rag_context}\n"
             "Gere uma notificação curta (push notification) de 1 a 2 frases para o celular do usuário. "
             "Seja direto e mantenha sua personalidade intrínseca."
         )

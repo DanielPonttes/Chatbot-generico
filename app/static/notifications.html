@@ -535,24 +535,27 @@
 
 
         // ==========================================
-        // Saved Notifications Manager
+        // Saved Notifications Manager (SQLite Backend)
         // ==========================================
         let currentTab = 'like';
 
-        function getSavedNotifications() {
+        async function getSavedNotifications() {
             try {
-                return JSON.parse(localStorage.getItem('savedNotifications')) || [];
-            } catch (e) { return []; }
+                const res = await fetch('/notifications/saved');
+                if (!res.ok) throw new Error('Falha ao buscar notificações');
+                return await res.json();
+            } catch (e) {
+                console.error(e);
+                return [];
+            }
         }
 
-        function saveNotification(type) {
+        async function saveNotification(type) {
             const contentText = document.getElementById('notifContent').textContent;
             const personaText = document.getElementById('notifPersonaName').textContent;
             const modelText = document.getElementById('modelUsedTag').textContent.replace('Modelo: ', '');
 
             if (!contentText) return;
-
-            const savedList = getSavedNotifications();
 
             const newItem = {
                 id: Date.now().toString(),
@@ -563,28 +566,40 @@
                 date: new Date().toLocaleString()
             };
 
-            savedList.unshift(newItem); // Add to beginning
-            localStorage.setItem('savedNotifications', JSON.stringify(savedList));
+            try {
+                const res = await fetch('/notifications/saved', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newItem)
+                });
 
-            // Visual feedback - replace buttons with Thank You message
-            const evalContainer = document.getElementById('evalButtons');
-            if (evalContainer) {
-                evalContainer.innerHTML = `
-                    <span class="text-xs text-primary dark:text-primary-light font-medium self-center flex items-center gap-1 bg-primary/10 px-3 py-1.5 rounded-md anim-eco-pulse">
-                        <i data-lucide="check-circle" class="w-4 h-4"></i> Obrigado pelo feedback!
-                    </span>
-                `;
-                lucide.createIcons();
+                if (!res.ok) throw new Error('Erro ao salvar no banco');
+
+                // Visual feedback - replace buttons with Thank You message
+                const evalContainer = document.getElementById('evalButtons');
+                if (evalContainer) {
+                    evalContainer.innerHTML = `
+                        <span class="text-xs text-primary dark:text-primary-light font-medium self-center flex items-center gap-1 bg-primary/10 px-3 py-1.5 rounded-md anim-eco-pulse">
+                            <i data-lucide="check-circle" class="w-4 h-4"></i> Obrigado pelo feedback!
+                        </span>
+                    `;
+                    lucide.createIcons();
+                }
+
+                // Update UI if modal is open
+                if (!document.getElementById('savedModal').classList.contains('hidden')) {
+                    await renderSavedList();
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Falha ao salvar notificação.");
             }
-
-            // Render to update counts if modal was opened before
-            renderSavedList();
         }
 
-        function toggleSavedModal(show) {
+        async function toggleSavedModal(show) {
             document.getElementById('savedModal').classList.toggle('hidden', !show);
             if (show) {
-                renderSavedList();
+                await renderSavedList();
                 switchTab(currentTab); // Ensure UI reflects state
             }
         }
@@ -608,25 +623,33 @@
             renderSavedList();
         }
 
-        function deleteSaved(id) {
-            let list = getSavedNotifications();
-            list = list.filter(item => item.id !== id);
-            localStorage.setItem('savedNotifications', JSON.stringify(list));
-            renderSavedList();
-        }
-
-        function clearSaved() {
-            if (confirm("Tem certeza que deseja apagar TODAS as notificações salvas permanentemente?")) {
-                localStorage.removeItem('savedNotifications');
-                renderSavedList();
+        async function deleteSaved(id) {
+            try {
+                const res = await fetch(`/notifications/saved/${id}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('Falha ao deletar');
+                await renderSavedList();
+            } catch (e) {
+                console.error(e);
             }
         }
 
-        function renderSavedList() {
+        async function clearSaved() {
+            if (confirm("Tem certeza que deseja apagar TODAS as notificações salvas permanentemente do Banco de Dados?")) {
+                try {
+                    const res = await fetch('/notifications/saved/all', { method: 'DELETE' });
+                    if (!res.ok) throw new Error('Falha ao limpar');
+                    await renderSavedList();
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        }
+
+        async function renderSavedList() {
             const container = document.getElementById('savedListContainer');
             if (!container) return;
 
-            const allSaved = getSavedNotifications();
+            const allSaved = await getSavedNotifications();
             const filtered = allSaved.filter(item => item.type === currentTab);
 
             // Update Counts

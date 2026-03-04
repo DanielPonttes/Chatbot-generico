@@ -61,6 +61,10 @@ async def lifespan(app: FastAPI):
     logger.info(f"   Max mensagens: {settings.memory_max_messages}")
     logger.info("=" * 50)
     
+    # Initialize Saved Notifications DB
+    from app.api.db import init_db
+    init_db()
+    
     yield
     
     # ----- SHUTDOWN -----

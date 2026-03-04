@@ -177,3 +177,24 @@ class ErrorResponse(BaseModel):
         default=None,
         description="Detalhes adicionais do erro",
     )
+
+
+class SavedNotificationItem(BaseModel):
+    """Modelo base para Notificação Salva."""
+    id: str = Field(description="ID gerado no frontend (timestamp)")
+    type: Literal["like", "dislike"] = Field(description="Tipo de avaliação")
+    content: str = Field(description="Conteúdo da notificação")
+    persona: str = Field(description="Nome da persona usada")
+    model: str = Field(description="Modelo LLM usado")
+    date: str = Field(description="Data formatada no frontend")
+
+
+class SavedNotificationCreate(SavedNotificationItem):
+    """Request para salvar nova notificação."""
+    pass
+
+
+class SavedNotificationResponse(SavedNotificationItem):
+    """Response com item salvo."""
+    pass
+

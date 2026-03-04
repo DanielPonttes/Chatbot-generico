@@ -112,14 +112,7 @@ app.add_middleware(
 app.include_router(router, tags=["chat"])
 
 
-# ==========================================
-# Rota raiz (serve a interface de testes)
-# ==========================================
-@app.get("/", include_in_schema=False)
-async def root():
-    """Serve a interface de testes."""
-    return FileResponse(STATIC_DIR / "index.html")
-
+# A tela de conversa foi removida.
 @app.get("/notifications", include_in_schema=False)
 async def notifications_page():
     """Serve a interface de testes de notificações."""

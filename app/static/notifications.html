@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatbot Genérico - Teste de Notificações</title>
+    <title>Iníciobot Genérico - Teste de Notificações</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -12,73 +12,59 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0f172a;
-            color: #e2e8f0;
+            background-color: #f8f9fa;
+            color: #2c3e50;
         }
 
         .glass-panel {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: #ffffff;
+            border: 1px solid #ecf0f1;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
 
         .gradient-text {
-            background: linear-gradient(to right, #818cf8, #c084fc);
+            background: linear-gradient(to right, #218084, #32b8c6);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #1e293b;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #475569;
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #64748b;
-        }
-
-        .notification-card {
-            transition: all 0.3s ease;
-        }
-
-        .notification-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-        }
     </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { primary: '#218084', 'primary-light': '#32b8c6', 'primary-dark': '#1a6470', accent: '#e67e22', success: '#27ae60', warning: '#f39c12', danger: '#e74c3c', background: '#f8f9fa', card: '#ffffff', text: '#2c3e50', 'text-light': '#7f8c8d', border: '#ecf0f1' }
+                }
+            }
+        }
+    </script>
 </head>
 
 <body class="h-screen flex flex-col overflow-hidden">
 
     <!-- Header -->
-    <header
-        class="h-16 border-b border-slate-700/50 bg-slate-900/50 backdrop-blur-md flex items-center justify-between px-6 z-10">
+    <header class="h-16 border-b border-border bg-white backdrop-blur-md flex items-center justify-between px-6 z-10">
         <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+            <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                 <i data-lucide="bell"></i>
             </div>
             <h1 class="font-bold text-lg tracking-wide">Teste de <span class="gradient-text">Notificações</span></h1>
         </div>
 
         <div class="flex items-center gap-4">
-            <a href="/" class="text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1">
+            <a href="/" class="text-xs text-text-light hover:text-text transition-colors flex items-center gap-1">
                 <i data-lucide="message-square" class="w-3 h-3"></i>
-                Ir para Chat
+                Voltar ao Início
             </a>
-            <button id="configBtn"
-                class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-md text-sm transition-colors border border-slate-700 flex items-center gap-2">
-                <i data-lucide="settings" class="w-4 h-4"></i>
-                Configurar Persona/Modelo
-            </button>
+            <!-- Indicator API -->
+            <div class="flex items-center gap-2 cursor-pointer ml-2" onclick="toggleGlobalModal(true)">
+                <span
+                    class="api-status-text text-xs font-medium text-text-light hidden sm:inline-block">Verificando...</span>
+                <div class="api-status-dot w-3 h-3 rounded-full bg-gray-400 shadow-sm" title="Verificando API..."></div>
+                <button id="configBtn"
+                    class="bg-gray-100 hover:bg-gray-200 text-text p-2 rounded-full transition-colors">
+                    <i data-lucide="settings" class="w-4 h-4"></i>
+                </button>
+            </div>
         </div>
     </header>
 
@@ -89,8 +75,8 @@
 
             <!-- Intro Text -->
             <div class="text-center space-y-2">
-                <h2 class="text-2xl font-semibold text-white">Gerador de Notificações Proativas</h2>
-                <p class="text-slate-400">Teste como o bot iniciaria uma conversa com diferentes personas.</p>
+                <h2 class="text-2xl font-semibold text-text">Gerador de Notificações Proativas</h2>
+                <p class="text-text-light">Teste como o bot iniciaria uma conversa com diferentes personas.</p>
             </div>
 
             <!-- Action Area -->
@@ -100,32 +86,32 @@
 
                     <!-- Bot Persona (System Prompt) -->
                     <div class="flex flex-col gap-2">
-                        <label class="text-sm font-medium text-slate-300">Estilo do Bot (Persona)</label>
+                        <label class="text-sm font-medium text-text">Estilo do Bot (Persona)</label>
                         <div class="relative w-full">
                             <select id="personaSelect"
-                                class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-4 py-2.5 appearance-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none cursor-pointer">
+                                class="w-full bg-gray-50 border border-border text-text rounded-lg px-4 py-2.5 appearance-none focus:ring-2 focus:ring-primary focus:border-transparent outline-none cursor-pointer">
                                 <!-- Populated via JS -->
                             </select>
                             <i data-lucide="chevron-down"
-                                class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none"></i>
+                                class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"></i>
                         </div>
                     </div>
 
                     <!-- Target User Profile -->
                     <div class="flex flex-col gap-2">
-                        <label class="text-sm font-medium text-slate-300">Perfil do Usuário Alvo</label>
+                        <label class="text-sm font-medium text-text">Perfil do Usuário Alvo</label>
                         <div class="relative w-full">
                             <select id="targetProfileSelect"
-                                class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-4 py-2.5 appearance-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none cursor-pointer">
+                                class="w-full bg-gray-50 border border-border text-text rounded-lg px-4 py-2.5 appearance-none focus:ring-2 focus:ring-primary focus:border-transparent outline-none cursor-pointer">
                                 <!-- Populated via JS -->
                             </select>
                             <i data-lucide="chevron-down"
-                                class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none"></i>
+                                class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"></i>
                         </div>
                     </div>
 
                     <button id="generateBtn"
-                        class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-lg font-medium transition-all shadow-lg shadow-indigo-500/20 active:scale-95 flex items-center gap-2 justify-center mt-2">
+                        class="bg-primary hover:bg-primary-light text-text px-6 py-2.5 rounded-lg font-medium transition-all shadow-lg shadow-primary/20 active:scale-95 flex items-center gap-2 justify-center mt-2">
                         <i data-lucide="sparkles" class="w-4 h-4"></i>
                         Gerar Notificação
                     </button>
@@ -133,32 +119,32 @@
 
                 <!-- Notification Display -->
                 <div id="notificationArea" class="w-full hidden">
-                    <div class="bg-slate-800/80 border border-slate-700 rounded-xl p-5 relative notification-card">
+                    <div class="bg-white border-border border border-border rounded-xl p-5 relative notification-card">
                         <div class="flex items-start gap-4">
                             <div
-                                class="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 flex-shrink-0">
+                                class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
                                 <i data-lucide="bot" class="w-6 h-6"></i>
                             </div>
                             <div class="flex-1 space-y-1">
                                 <div class="flex items-center justify-between">
                                     <span id="notifPersonaName"
-                                        class="text-sm font-medium text-indigo-300">Persona</span>
-                                    <span class="text-xs text-slate-500">Agora</span>
+                                        class="text-sm font-medium text-primary-light">Persona</span>
+                                    <span class="text-xs text-gray-400">Agora</span>
                                 </div>
-                                <p id="notifContent" class="text-slate-200 leading-relaxed"></p>
+                                <p id="notifContent" class="text-text leading-relaxed"></p>
                             </div>
                         </div>
 
                         <!-- Evaluation Actions -->
-                        <div class="mt-4 pt-4 border-t border-slate-700/50 flex justify-end gap-2">
-                            <span class="text-xs text-slate-500 self-center mr-auto" id="modelUsedTag">Modelo: -</span>
+                        <div class="mt-4 pt-4 border-t border-border flex justify-end gap-2">
+                            <span class="text-xs text-gray-400 self-center mr-auto" id="modelUsedTag">Modelo: -</span>
                             <button
-                                class="text-slate-400 hover:text-green-400 p-1.5 rounded-md hover:bg-slate-700/50 transition-colors"
+                                class="text-text-light hover:text-green-400 p-1.5 rounded-md hover:bg-gray-200/50 transition-colors"
                                 title="Boa notificação">
                                 <i data-lucide="thumbs-up" class="w-4 h-4"></i>
                             </button>
                             <button
-                                class="text-slate-400 hover:text-red-400 p-1.5 rounded-md hover:bg-slate-700/50 transition-colors"
+                                class="text-text-light hover:text-red-400 p-1.5 rounded-md hover:bg-gray-200/50 transition-colors"
                                 title="Notificação ruim">
                                 <i data-lucide="thumbs-down" class="w-4 h-4"></i>
                             </button>
@@ -169,10 +155,9 @@
                 <!-- Loading State -->
                 <div id="loadingState" class="hidden py-8">
                     <div class="flex flex-col items-center gap-3">
-                        <div
-                            class="w-8 h-8 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin">
+                        <div class="w-8 h-8 border-2 border-indigo-500/30 border-t-primary rounded-full animate-spin">
                         </div>
-                        <span class="text-sm text-indigo-300 animate-pulse">Criando mensagem mágica...</span>
+                        <span class="text-sm text-primary-light animate-pulse">Criando mensagem mágica...</span>
                     </div>
                 </div>
 
@@ -184,46 +169,60 @@
     <div id="configModal" class="fixed inset-0 z-50 hidden">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="modalBackdrop"></div>
         <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-6">
-            <div class="glass-panel bg-slate-900 rounded-2xl shadow-2xl p-6 space-y-6 border border-slate-700">
+            <div class="glass-panel bg-white rounded-2xl shadow-2xl p-6 space-y-6 border border-border">
 
                 <div class="flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-white">Configurações Avançadas</h3>
-                    <button id="closeModalBtn" class="text-slate-400 hover:text-white transition-colors">
+                    <h3 class="text-lg font-semibold text-text">Configurações & Status</h3>
+                    <button id="closeModalBtn" class="text-text-light hover:text-text transition-colors">
                         <i data-lucide="x" class="w-5 h-5"></i>
                     </button>
                 </div>
 
                 <div class="space-y-4">
+                    <!-- LLM Service Health -->
+                    <div class="p-4 bg-gray-50 rounded-lg border border-border">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div
+                                class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                                <i data-lucide="activity" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-sm text-text">Status do Serviço LLM</h4>
+                                <p class="text-xs text-text-light" id="healthStatusText">Verificando...</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Model Selection -->
                     <div class="space-y-2">
-                        <label class="text-sm font-medium text-slate-300">Modelo LLM</label>
+                        <label class="text-sm font-medium text-text">Modelo LLM</label>
                         <select id="modelOverride"
-                            class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                            class="w-full bg-gray-50 border border-border text-text rounded-lg px-3 py-2 flex-shrink-0 focus:ring-2 focus:ring-primary outline-none">
                             <option value="">Padrão do Sistema</option>
                             <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
                             <option value="gemini-3-pro-preview">Gemini 3 Pro Preview</option>
                         </select>
-                        <p class="text-xs text-slate-500">Selecione para forçar um modelo específico nesta requisição.
+                        <p class="text-xs text-gray-400">Selecione para forçar um modelo específico nesta requisição.
                         </p>
                     </div>
 
                     <!-- Persona Override -->
                     <div class="space-y-2">
                         <div class="flex items-center justify-between">
-                            <label class="text-sm font-medium text-slate-300">Override de Persona</label>
-                            <span class="text-xs text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">Opcional</span>
+                            <label class="text-sm font-medium text-text">Override de Persona</label>
+                            <span class="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded">Opcional</span>
                         </div>
                         <textarea id="systemPromptOverride" rows="4"
                             placeholder="Ex: Você é um gato rabugento que odeia segundas-feiras..."
-                            class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none resize-none text-sm"></textarea>
-                        <p class="text-xs text-slate-500">Define um System Prompt temporário. Se preenchido, ignora a
+                            class="w-full bg-gray-50 border border-border text-text rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none resize-none text-sm"></textarea>
+                        <p class="text-xs text-gray-400">Define um System Prompt temporário. Se preenchido, ignora a
                             persona selecionada.</p>
                     </div>
                 </div>
 
                 <div class="flex justify-end pt-2">
                     <button id="saveConfigBtn"
-                        class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        class="bg-primary hover:bg-primary-light text-text px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors">
                         Salvar e Fechar
                     </button>
                 </div>
@@ -349,11 +348,73 @@
 
             // Visual feedback on config button if active
             if (config.modelOverride || config.personaPrompt) {
-                configBtn.classList.add('text-indigo-300', 'border-indigo-500/50');
+                configBtn.classList.add('text-primary-light', 'border-primary/50');
             } else {
-                configBtn.classList.remove('text-indigo-300', 'border-indigo-500/50');
+                configBtn.classList.remove('text-primary-light', 'border-primary/50');
             }
         });
+
+        // Toggle Wrapper for the header
+        function toggleGlobalModal(show) {
+            toggleModal(show);
+            if (show) { checkHealth(); }
+        }
+
+        async function checkHealth() {
+            const statusEl = document.getElementById('healthStatusText');
+            if (!statusEl) return;
+            statusEl.textContent = "Verificando...";
+            statusEl.className = "text-xs text-text-light";
+            try {
+                const res = await fetch('/health');
+                const data = await res.json();
+                if (data.status === 'ok' || data.status === 'healthy') {
+                    statusEl.textContent = `Online (${data.provider} - ${data.model})`;
+                    statusEl.className = "text-xs text-success font-medium";
+                } else {
+                    statusEl.textContent = "Problemas detectados";
+                    statusEl.className = "text-xs text-danger font-medium";
+                }
+            } catch (e) {
+                statusEl.textContent = "Falha ao conectar";
+                statusEl.className = "text-xs text-danger font-medium";
+            }
+        }
+
+        async function pollHealthStatus() {
+            const dots = document.querySelectorAll('.api-status-dot');
+            const texts = document.querySelectorAll('.api-status-text');
+            try {
+                const res = await fetch('/health');
+                const data = await res.json();
+                const isOk = data.status === 'ok' || data.status === 'healthy';
+                const color = isOk ? 'bg-success' : 'bg-danger';
+                const pulse = isOk ? '' : 'animate-pulse';
+                const title = isOk ? `API Online (${data.provider})` : 'Erro na API';
+
+                dots.forEach(dot => {
+                    dot.className = `api-status-dot w-3 h-3 rounded-full ${color} ${pulse} shadow-sm cursor-help`;
+                    dot.title = title;
+                });
+
+                texts.forEach(t => {
+                    t.textContent = isOk ? data.model : 'Erro';
+                    t.className = `api-status-text text-xs mr-2 font-medium ${isOk ? 'text-text-light' : 'text-danger'}`;
+                });
+            } catch (e) {
+                dots.forEach(dot => {
+                    dot.className = `api-status-dot w-3 h-3 rounded-full bg-danger shadow-sm cursor-help`;
+                    dot.title = 'Offline / Sem Conexão';
+                });
+                texts.forEach(t => {
+                    t.textContent = 'Offline';
+                    t.className = `api-status-text text-xs mr-2 font-medium text-danger`;
+                });
+            }
+        }
+
+        pollHealthStatus();
+        setInterval(pollHealthStatus, 15000);
 
     </script>
 </body>

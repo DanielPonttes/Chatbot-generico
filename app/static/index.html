@@ -54,9 +54,35 @@
             border-radius: 15px;
             box-shadow: 0 4px 15px rgba(33, 128, 132, 0.2);
         }
+
+        .dark body {
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+
+        .dark .glass-panel {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        .dark .card-custom {
+            background: #1e293b;
+            border-color: #334155;
+        }
     </style>
     <script>
+        // Init Dark Mode before body loads to prevent flash
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+        }
+    </script>
+    <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
@@ -69,7 +95,17 @@
                         danger: '#e74c3c',
                         background: '#f8f9fa',
                         card: '#ffffff',
+                        text: '#2c3e50',
+                        'text-light': '#7f8c8d',
                         border: '#ecf0f1',
+                        // Dark mode specific colors
+                        dark: {
+                            bg: '#0f172a',
+                            card: '#1e293b',
+                            text: '#f8fafc',
+                            'text-light': '#94a3b8',
+                            border: '#334155'
+                        }
                     }
                 }
             }
@@ -77,13 +113,23 @@
     </script>
 </head>
 
-<body class="h-screen flex flex-col items-center overflow-auto p-4 md:p-8">
+<body
+    class="h-screen flex flex-col items-center overflow-auto p-4 md:p-8 bg-background dark:bg-dark-bg text-text dark:text-dark-text transition-colors duration-200">
     <!-- Global Settings Button and Real-Time Status -->
     <div class="fixed top-4 right-4 z-40 flex items-center gap-2 cursor-pointer" onclick="toggleGlobalModal(true)">
-        <span class="api-status-text text-xs font-medium text-text-light">Verificando...</span>
+        <span class="api-status-text text-xs font-medium text-text dark:text-dark-text-light">Verificando...</span>
         <div class="api-status-dot w-3 h-3 rounded-full bg-gray-400 shadow-sm" title="Verificando API..."></div>
+
+        <!-- Theme Toggle -->
+        <button onclick="toggleTheme()"
+            class="bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-text dark:text-dark-text p-2 rounded-full transition-colors ml-2"
+            title="Alternar Tema Escuro">
+            <i data-lucide="moon" class="w-4 h-4 dark:hidden"></i>
+            <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+        </button>
+
         <button
-            class="bg-white/80 backdrop-blur border border-border text-text p-2 rounded-full shadow-md hover:bg-gray-50 transition-colors ml-2">
+            class="bg-white dark:bg-dark-card/80 backdrop-blur border border-border dark:border-dark-border text-text dark:text-dark-text p-2 rounded-full shadow-md hover:bg-gray-50 dark:bg-slate-800 transition-colors ml-2">
             <i data-lucide="settings" class="w-5 h-5"></i>
         </button>
     </div>
@@ -104,8 +150,9 @@
                         class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4">
                         <i data-lucide="bell" class="w-8 h-8"></i>
                     </div>
-                    <h2 class="text-xl font-bold text-gray-800 mb-2">Notificações</h2>
-                    <p class="text-gray-500 text-sm">Geração de notificações proativas com o bot.</p>
+                    <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-2">Notificações</h2>
+                    <p class="text-gray-500 dark:text-gray-400 dark:text-gray-500 text-sm">Geração de notificações
+                        proativas com o bot.</p>
                 </div>
             </a>
 
@@ -115,8 +162,9 @@
                         class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4">
                         <i data-lucide="database" class="w-8 h-8"></i>
                     </div>
-                    <h2 class="text-xl font-bold text-gray-800 mb-2">Checar RAG</h2>
-                    <p class="text-gray-500 text-sm">Consulte a base de vetores dos manuais.</p>
+                    <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-2">Checar RAG</h2>
+                    <p class="text-gray-500 dark:text-gray-400 dark:text-gray-500 text-sm">Consulte a base de vetores
+                        dos manuais.</p>
                 </div>
             </a>
 
@@ -125,6 +173,17 @@
     </div>
 
     <script>
+        // Theme Toggling Logic
+        function toggleTheme() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
         lucide.createIcons();
     </script>
 
@@ -132,35 +191,39 @@
     <div id="globalSettingsModal" class="fixed inset-0 z-50 hidden">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="toggleGlobalModal(false)"></div>
         <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-6">
-            <div class="bg-white rounded-2xl shadow-2xl p-6 space-y-6 border border-border">
+            <div
+                class="bg-white dark:bg-dark-card rounded-2xl shadow-2xl p-6 space-y-6 border border-border dark:border-dark-border">
                 <div class="flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-text">Configurações & Status</h3>
+                    <h3 class="text-lg font-semibold text-text dark:text-dark-text">Configurações & Status</h3>
                     <button onclick="toggleGlobalModal(false)"
-                        class="text-text-light hover:text-text transition-colors">
+                        class="text-text dark:text-dark-text-light hover:text-text dark:text-dark-text transition-colors">
                         <i data-lucide="x" class="w-5 h-5"></i>
                     </button>
                 </div>
 
                 <div class="space-y-4">
                     <!-- LLM Service Health -->
-                    <div class="p-4 bg-gray-50 rounded-lg border border-border">
+                    <div
+                        class="p-4 bg-gray-50 dark:bg-slate-800 rounded-lg border border-border dark:border-dark-border">
                         <div class="flex items-center gap-3 mb-2">
                             <div
                                 class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                                 <i data-lucide="activity" class="w-4 h-4"></i>
                             </div>
                             <div>
-                                <h4 class="font-medium text-sm text-text">Status do Serviço LLM</h4>
-                                <p class="text-xs text-text-light" id="healthStatusText">Verificando...</p>
+                                <h4 class="font-medium text-sm text-text dark:text-dark-text">Status do Serviço LLM</h4>
+                                <p class="text-xs text-text dark:text-dark-text-light" id="healthStatusText">
+                                    Verificando...</p>
                             </div>
                         </div>
                     </div>
 
                     <!-- Model Selection (if applicable) -->
                     <div class="space-y-2">
-                        <label class="text-sm font-medium text-text">Modelo Preferencial (Notificações)</label>
+                        <label class="text-sm font-medium text-text dark:text-dark-text">Modelo Preferencial
+                            (Notificações)</label>
                         <select id="globalModelSelect"
-                            class="w-full bg-white border border-border text-text rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none">
+                            class="w-full bg-white dark:bg-dark-card border border-border dark:border-dark-border text-text dark:text-dark-text rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none">
                             <option value="">Padrão do Sistema</option>
                             <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
                             <option value="gemini-3-pro-preview">Gemini 3 Pro Preview</option>
@@ -188,7 +251,7 @@
             const statusEl = document.getElementById('healthStatusText');
             if (!statusEl) return;
             statusEl.textContent = "Verificando...";
-            statusEl.className = "text-xs text-text-light";
+            statusEl.className = "text-xs text-text dark:text-dark-text-light";
             try {
                 const res = await fetch('/health');
                 const data = await res.json();
@@ -229,7 +292,7 @@
 
                 texts.forEach(t => {
                     t.textContent = isOk ? data.model : 'Erro';
-                    t.className = `api-status-text text-xs mr-2 font-medium ${isOk ? 'text-text-light' : 'text-danger'}`;
+                    t.className = `api-status-text text-xs mr-2 font-medium ${isOk ? 'text-text dark:text-dark-text-light' : 'text-danger'}`;
                 });
             } catch (e) {
                 dots.forEach(dot => {

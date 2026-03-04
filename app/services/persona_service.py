@@ -112,7 +112,8 @@ class PersonaService:
         persona_id: str, 
         target_profile_id: Optional[str] = None,
         persona_override: Optional[object] = None, 
-        model_override: Optional[str] = None
+        model_override: Optional[str] = None,
+        use_rag: bool = True
     ) -> str:
         """
         Gera uma mensagem proativa baseada na persona escolhida e no perfil do usuário alvo.
@@ -148,18 +149,19 @@ class PersonaService:
             if getattr(persona_override, 'system_prompt', None):
                 system_prompt = persona_override.system_prompt
                 
-        # Busca contexto no RAG
-        rag_query = f"Dicas de eficiência energética, economia e conscientização sustentável."
+        # Busca contexto no RAG se habilitado
         rag_context = ""
-        try:
-            retrieved_docs = get_relevant_context(rag_query, k=3)
-            if retrieved_docs:
-                rag_context = (
-                    f"\nUse as seguintes informações reais recuperadas da base de conhecimento para dar mais embasamento à sua mensagem:\n"
-                    f"<BASE_DE_CONHECIMENTO>\n{retrieved_docs}\n</BASE_DE_CONHECIMENTO>\n"
-                )
-        except Exception as e:
-            logger.error(f"Erro ao buscar contexto RAG (ignorando): {e}")
+        if use_rag:
+            rag_query = f"Dicas de eficiência energética, economia e conscientização sustentável."
+            try:
+                retrieved_docs = get_relevant_context(rag_query, k=3)
+                if retrieved_docs:
+                    rag_context = (
+                        f"\nUse as seguintes informações reais recuperadas da base de conhecimento para dar mais embasamento à sua mensagem:\n"
+                        f"<BASE_DE_CONHECIMENTO>\n{retrieved_docs}\n</BASE_DE_CONHECIMENTO>\n"
+                    )
+            except Exception as e:
+                logger.error(f"Erro ao buscar contexto RAG (ignorando): {e}")
 
         # Cria um prompt específico para gerar a mensagem inicial
         prompt = (

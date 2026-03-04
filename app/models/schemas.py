@@ -64,6 +64,11 @@ class ProactiveChatRequest(BaseModel):
         description="Nome do modelo específico para esta requisição (ex: gemini-3-pro-preview)",
         examples=["gemini-1.5-pro", "gemini-1.5-flash"],
     )
+    
+    use_rag: bool = Field(
+        default=True,
+        description="Se o bot deve usar contexto da base de dados RAG (False para desativar)",
+    )
 
 
 class RAGSearchRequest(BaseModel):

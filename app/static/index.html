@@ -229,6 +229,19 @@
                             <option value="gemini-3-pro-preview">Gemini 3 Pro Preview</option>
                         </select>
                     </div>
+
+                    <!-- RAG Integration Toggle -->
+                    <div class="space-y-2 mt-4 pt-4 border-t border-border dark:border-dark-border">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="globalUseRagToggle" checked
+                                class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary dark:bg-slate-800 dark:border-slate-600">
+                            <span class="text-sm font-medium text-text dark:text-dark-text">
+                                Usar RAG nas Notificações
+                            </span>
+                        </label>
+                        <p class="text-xs text-text-light dark:text-gray-400 ml-8">Se ativado, o bot pesquisa na base de
+                            conhecimento antes de responder.</p>
+                    </div>
                 </div>
 
                 <div class="flex justify-end pt-2">
@@ -270,7 +283,14 @@
 
         function saveGlobalConfig() {
             const model = document.getElementById('globalModelSelect').value;
-            if (window.config) window.config.modelOverride = model;
+            const useRag = document.getElementById('globalUseRagToggle').checked;
+
+            if (window.config) {
+                window.config.modelOverride = model;
+                window.config.use_rag = useRag;
+            } else {
+                window.config = { modelOverride: model, use_rag: useRag };
+            }
             toggleGlobalModal(false);
         }
 

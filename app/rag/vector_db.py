@@ -1,12 +1,14 @@
 import os
+from pathlib import Path
 from langchain_chroma import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Caminho onde o ChromaDB salvará os dados localmente
-DB_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "chroma_db")
+# Diretório onde o banco vetorial será salvo fisicamente
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+DB_DIR = str(BASE_DIR / "data" / "chroma_db")
 os.makedirs(DB_DIR, exist_ok=True)
 
 def get_base_embeddings():

@@ -3,10 +3,15 @@ import os
 import json
 from datetime import datetime
 import logging
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-DB_PATH = os.environ.get("SQLITE_DB_PATH", "saved_notifications.db")
+# Calcula o caminho relativo para a raiz do projeto e depois data/db
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+DB_DIR = BASE_DIR / "data" / "db"
+DB_DIR.mkdir(parents=True, exist_ok=True)
+DB_PATH = os.environ.get("SQLITE_DB_PATH", str(DB_DIR / "saved_notifications.db"))
 
 def get_db_connection():
     """Retorna uma conexão com o banco de dados SQLite."""

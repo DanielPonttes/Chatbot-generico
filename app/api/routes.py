@@ -304,3 +304,65 @@ async def semantic_search(request: RAGSearchRequest) -> RAGSearchResponse:
             provider_available=False,
             message=f"Erro ao verificar status: {e}",
         )
+
+
+from app.api.db import (
+    get_all_saved_notifications, save_notification, 
+    delete_notification, clear_all_notifications
+)
+from app.models.schemas import SavedNotificationCreate, SavedNotificationResponse
+
+
+@router.get(
+    "/notifications/saved",
+    response_model=list[SavedNotificationResponse],
+    summary="Listar notificações salvas",
+    description="Retorna todas as notificações avaliadas pelo usuário.",
+)
+async def list_saved_notifications():
+    notifications = get_all_saved_notifications()
+    return notifications
+
+
+@router.post(
+    "/notifications/saved",
+    response_model=dict,
+    summary="Salvar notificação",
+    description="Salva uma notificação no banco de dados SQLite.",
+)
+async def create_saved_notification(request: SavedNotificationCreate):
+    success = save_notification(request.model_dump())
+    if not success:
+        from fastapi import HTTPException, status
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Não foi possível salvar a notificação (ID duplicado ou erro)."
+        )
+    return {"status": "success"}
+
+
+@router.delete(
+    "/notifications/saved/all",
+    response_model=dict,
+    summary="Limpar todas as notificações salvas",
+)
+async def clear_saved_notifications():
+    deleted_count = clear_all_notifications()
+    return {"status": "success", "deleted": deleted_count}
+
+
+@router.delete(
+    "/notifications/saved/{notif_id}",
+    response_model=dict,
+    summary="Deletar uma notificação salva específica",
+)
+async def delete_saved_notification(notif_id: str):
+    success = delete_notification(notif_id)
+    if not success:
+        from fastapi import HTTPException, status
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notificação não encontrada ou erro ao deletar"
+        )
+    return {"status": "success"}
+

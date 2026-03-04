@@ -27,6 +27,45 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-8px);
+            }
+
+            100% {
+                transform: translateY(0px);
+            }
+        }
+
+        @keyframes eco-pulse {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(33, 128, 132, 0.4);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 15px rgba(33, 128, 132, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(33, 128, 132, 0);
+            }
+        }
+
+        .anim-float {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .anim-eco-pulse {
+            animation: eco-pulse 2s infinite;
+        }
     </style>
     <script>
         tailwind.config = {
@@ -152,12 +191,35 @@
                     </div>
                 </div>
 
-                <!-- Loading State -->
-                <div id="loadingState" class="hidden py-8">
-                    <div class="flex flex-col items-center gap-3">
-                        <div class="w-8 h-8 border-2 border-indigo-500/30 border-t-primary rounded-full animate-spin">
+                <!-- Loading State (Eco Dynamic Animation) -->
+                <div id="loadingState" class="hidden py-12 flex flex-col items-center justify-center w-full">
+                    <!-- Dynamic Rings -->
+                    <div class="relative w-24 h-24 flex items-center justify-center mb-6">
+                        <div
+                            class="absolute inset-0 rounded-full border-4 border-primary/20 animate-[spin_4s_linear_infinite]">
                         </div>
-                        <span class="text-sm text-primary-light animate-pulse">Criando mensagem mágica...</span>
+                        <div
+                            class="absolute inset-2 rounded-full border-4 border-transparent border-t-accent/60 border-l-accent/60 animate-[spin_3s_linear_infinite_reverse]">
+                        </div>
+
+                        <!-- Pulsing Center -->
+                        <div
+                            class="w-14 h-14 bg-gradient-to-br from-primary to-primary-light rounded-full flex items-center justify-center text-white anim-eco-pulse anim-float shadow-xl z-10">
+                            <i data-lucide="leaf" class="w-7 h-7"></i>
+                        </div>
+
+                        <!-- Mini floating icons -->
+                        <div class="absolute top-0 right-0 text-primary-light animate-bounce"
+                            style="animation-delay: 0.2s;"><i data-lucide="sparkles" class="w-5 h-5"></i></div>
+                        <div class="absolute bottom-1 left-1 text-accent animate-bounce" style="animation-delay: 0.5s;">
+                            <i data-lucide="zap" class="w-5 h-5"></i></div>
+                    </div>
+
+                    <!-- Dynamic Text -->
+                    <div class="mt-2 flex flex-col items-center text-center h-16">
+                        <h4 class="text-text font-semibold text-lg" id="loadingTitle">Pensando...</h4>
+                        <p class="text-sm text-text-light mt-1 animate-pulse" id="loadingSubtitle">Processando dados
+                            sustentáveis</p>
                     </div>
                 </div>
 
@@ -293,8 +355,29 @@
             // UI Updates
             notificationArea.classList.add('hidden');
             loadingState.classList.remove('hidden');
+            loadingState.classList.add('flex');
             generateBtn.disabled = true;
             generateBtn.classList.add('opacity-70');
+
+            // Dynamic Text Logic
+            const titles = ["Analisando o Perfil...", "Buscando Padrões Verdes...", "Formulando a Notificação...", "Quase lá..."];
+            const subtitles = [
+                "Verificando histórico de consumo e RAG...",
+                "Cruzando dados na base de sustentabilidade...",
+                "Aplicando as diretrizes da Persona escolhida...",
+                "Ajustando as dicas de economia para gerar mais impacto..."
+            ];
+            let step = 0;
+            const titleEl = document.getElementById("loadingTitle");
+            const subEl = document.getElementById("loadingSubtitle");
+            titleEl.textContent = titles[0];
+            subEl.textContent = subtitles[0];
+
+            const loadingInterval = setInterval(() => {
+                step = (step + 1) % titles.length;
+                titleEl.textContent = titles[step];
+                subEl.textContent = subtitles[step];
+            }, 3000);
 
             try {
                 const payload = {
@@ -326,7 +409,9 @@
             } catch (e) {
                 alert('Erro ao gerar notificação: ' + e.message);
             } finally {
+                clearInterval(loadingInterval);
                 loadingState.classList.add('hidden');
+                loadingState.classList.remove('flex');
                 generateBtn.disabled = false;
                 generateBtn.classList.remove('opacity-70');
             }

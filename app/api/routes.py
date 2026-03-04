@@ -173,12 +173,13 @@ async def chat_proactive(request: ProactiveChatRequest) -> ChatResponse:
     Não requer histórico anterior.
     """
     try:
-        # Gera mensagem com overrides
+        # Gera mensagem com overrides e RAG
         message = await PersonaService.generate_proactive_message(
             request.persona_id, 
             target_profile_id=request.target_profile_id,
             persona_override=request.persona_override,
-            model_override=request.model_override
+            model_override=request.model_override,
+            use_rag=request.use_rag
         )
         
         provider = get_llm_provider()

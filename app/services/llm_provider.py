@@ -14,7 +14,7 @@ import httpx
 
 from app.core.config import settings
 try:
-    import google.generativeai as genai
+    from google import genai
 except ImportError:
     genai = None
 
@@ -216,7 +216,7 @@ class GoogleGeminiProvider(LLMProvider):
     ):
         if not genai:
             raise ImportError(
-                "Biblioteca 'google-generativeai' não instalada. "
+                "Biblioteca 'google-genai' (google-genai) não instalada. "
                 "Adicione ao requirements.txt."
             )
             
@@ -226,13 +226,9 @@ class GoogleGeminiProvider(LLMProvider):
                 "Defina a variável de ambiente GEMINI_API_KEY."
             )
         
-        genai.configure(api_key=api_key)
+        self._client = genai.Client(api_key=api_key)
         self._model_name = model_name
         self._timeout = timeout
-        
-        # O SDK não precisa de um cliente persistente da mesma forma que http/ollama
-        # mas configuramos o modelo aqui
-        self._model = genai.GenerativeModel(model_name)
     
     @property
     def name(self) -> Literal["ollama", "huggingface", "google"]:
@@ -247,48 +243,48 @@ class GoogleGeminiProvider(LLMProvider):
         Gera resposta usando o SDK do Gemini.
         """
         try:
-            # Decide qual modelo usar
+            target_model = model_override if model_override else self._model_name
             if model_override:
                 logger.info(f"Usando modelo override no Gemini: {model_override}")
-                active_model = genai.GenerativeModel(model_override)
-            else:
-                active_model = self._model
+            
             # Converte histórico para o formato do Gemini
             chat_history = []
+            
+            # O novo SDK usa config para manter histórico se estivermos chamando o generate_content em um loop,
+            # mas o novo modo suporta formatar a string de prompts. 
+            # Como a aplicação envia mensagens iterativas:
+            # "A conversa começa com system prompt e usa a roles permitidas"
+            
+            contents = []
             if settings.bot_system_prompt:
-                 # system prompt é tratado na configuração ou como primeira mensagem dependendo da versão
-                 # Para simplificar e compatibilidade, vamos injetar no início se possível, 
-                 # mas o SDK do genai tem suporte específico para system instructions em versões recentes.
-                 # Vamos usar uma abordagem simples de append por enquanto ou usar o system_instruction se disponível no init.
-                 pass
+                contents.append(genai.types.Content(role="user", parts=[genai.types.Part.from_text(text=f"Instructions: {settings.bot_system_prompt}")]))
+                contents.append(genai.types.Content(role="model", parts=[genai.types.Part.from_text(text="Entendido.")]))
 
-            # O SDK gerencia o histórico se usarmos start_chat, mas aqui recebemos o histórico a cada request.
-            # Convertemos nosso formato (role: user/assistant) para o formato do Gemini (role: user/model)
             if history:
                 for msg in history:
                     role = "user" if msg["role"] == "user" else "model"
-                    chat_history.append({
-                        "role": role,
-                        "parts": [msg["content"]],
-                    })
+                    contents.append(
+                        genai.types.Content(
+                            role=role,
+                            parts=[genai.types.Part.from_text(text=msg["content"])]
+                        )
+                    )
             
-            # Inicia chat com histórico
-            chat = active_model.start_chat(history=chat_history)
-            
+            contents.append(
+                genai.types.Content(
+                    role="user",
+                    parts=[genai.types.Part.from_text(text=prompt)]
+                )
+            )
+
             # Envia mensagem
-            # system prompt pode ser concatenado se o modelo não suportar system instruction nativamente no init
-            final_prompt = prompt
-            if settings.bot_system_prompt and not history: # Injeta apenas se for começo ou não tiver histórico preservado pelo SDK
-                 # Nota: start_chat mantem estado, mas aqui estamos recriando a cada request.
-                 # Idealmente, o system prompt deveria ir na instrução do modelo, mas vamos concatenar para garantir.
-                 # Refinamento: Se o modelo suportar, melhor. No GenerativeModel(system_instruction=...)
-                 pass
-            
-            response = await chat.send_message_async(final_prompt)
+            response = self._client.models.generate_content(
+                model=target_model,
+                contents=contents
+            )
             return response.text.strip()
             
         except Exception as e:
-            # Captura erros específicos do SDK se necessário
             logger.error(f"Erro no Gemini: {e}")
             if "404" in str(e) or "not found" in str(e).lower():
                  raise ModelNotFoundError(f"Modelo {self._model_name} não encontrado.")
@@ -297,9 +293,7 @@ class GoogleGeminiProvider(LLMProvider):
     async def is_available(self) -> bool:
         """Tenta listar modelos para verificar acesso."""
         try:
-            # Lista modelo simples para teste de credencial
-            # genai.list_models() retorna um iterador
-            next(genai.list_models())
+            next(self._client.models.list())
             return True
         except Exception:
             return False

@@ -1,0 +1,29 @@
+# Cache do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Ambientes virtuais
+env/
+venv/
+.venv/
+
+# Variáveis de ambiente locais
+.env
+.env.*
+
+# Banco de dados e dados locais (para não ir na imagem, usaremos volume no compose)
+data/
+
+# Git
+.git/
+.gitignore
+
+# Outros
+docs/
+prototypes/
+tests/
+implementation_plan.md
+README.md

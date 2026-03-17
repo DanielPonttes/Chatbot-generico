@@ -2,6 +2,7 @@
 Serviço de Personas para mensagens proativas.
 """
 
+from email.mime import message
 import logging
 from dataclasses import dataclass
 from typing import List, Optional
@@ -173,7 +174,7 @@ class PersonaService:
         try:
             # Reutilizamos o método generate do provider com override de modelo se houver
             message = await provider.generate(prompt, model_override=model_override)
-            return message
+            return message, prompt
         except Exception as e:
             logger.error(f"Erro ao gerar mensagem proativa para {persona_id}: {e}")
             raise LLMProviderError(f"Falha na geração de mensagem: {e}")

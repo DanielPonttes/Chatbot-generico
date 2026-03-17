@@ -188,13 +188,28 @@ class SavedNotificationItem(BaseModel):
     model: str = Field(description="Modelo LLM usado")
     date: str = Field(description="Data formatada no frontend")
 
+from typing import Literal
 
-class SavedNotificationCreate(SavedNotificationItem):
-    """Request para salvar nova notificação."""
-    pass
+class SavedNotificationCreate(BaseModel):
+    id: str
+    type: Literal["Pendente", "Aprovada", "Reprovada"] = "Pendente"
+    content: str
+    persona: str
+    target_profile: str | None = None   # novo
+    prompt_used: str | None = None      # novo
+    model: str
+    date: str
 
+class SavedNotificationResponse(BaseModel):
+    id: str
+    type: str
+    content: str
+    persona: str
+    target_profile: str | None = None   # novo
+    prompt_used: str | None = None      # novo
+    model: str
+    date: str
 
-class SavedNotificationResponse(SavedNotificationItem):
-    """Response com item salvo."""
-    pass
-
+# Novo schema para o PATCH de avaliação
+class NotificationTypeUpdate(BaseModel):
+    type: Literal["Pendente", "Aprovada", "Reprovada"]

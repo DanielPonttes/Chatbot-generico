@@ -1,0 +1,24 @@
+app/
+  main.py                       ← entrada FastAPI + lifecycle + rotas estáticas
+  api/
+    routes.py                   ← endpoints /chat, /health, /personas, /rag
+    db.py                       ← inicializa DB de notificações (SQLite)
+  core/
+    config.py                   ← configurações (env + defaults)
+  models/
+    schemas.py                  ← Pydantic models para requests/responses
+  services/
+    llm_provider.py             ← abstrato + Ollama/HuggingFace/Gemini + factory
+    memory.py                   ← histórico (RAM ou SQLite) + factory
+    persona_service.py          ← personas + geração proativa + usa RAG
+  rag/
+    ingest.py                   ← processo de ingestão de PDFs em vetor DB
+    retriever.py                ← busca similaridade + metadata
+    vector_db.py                ← Chroma + embeddings (Gemini Embeddings)
+  static/
+    index.html                  ← UI de teste
+    notifications.html          ← UI de notificações
+    rag.html                    ← UI de visualização RAG
+data/
+  chroma_db/                    ← DB persistente do Chroma (vetores)
+  db/                           ← (provável) SQLite para notificações

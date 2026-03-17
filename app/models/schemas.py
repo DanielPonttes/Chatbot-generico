@@ -6,6 +6,7 @@ Define os modelos de dados usados na API.
 
 from typing import Literal
 from pydantic import BaseModel, Field
+from datetime import datetime
 
 
 class ChatRequest(BaseModel):
@@ -178,37 +179,28 @@ class ErrorResponse(BaseModel):
         description="Detalhes adicionais do erro",
     )
 
-
-class SavedNotificationItem(BaseModel):
-    """Modelo base para Notificação Salva."""
-    id: str = Field(description="ID gerado no frontend (timestamp)")
-    type: Literal["like", "dislike"] = Field(description="Tipo de avaliação")
-    content: str = Field(description="Conteúdo da notificação")
-    persona: str = Field(description="Nome da persona usada")
-    model: str = Field(description="Modelo LLM usado")
-    date: str = Field(description="Data formatada no frontend")
-
 from typing import Literal
 
 class SavedNotificationCreate(BaseModel):
-    id: str
-    type: Literal["Pendente", "Aprovada", "Reprovada"] = "Pendente"
+    """Payload recebido no POST /notifications/saved."""
+    type: Literal["Aprovada", "Reprovada"]  # alinhado com o frontend novo
     content: str
     persona: str
-    target_profile: str | None = None   # novo
-    prompt_used: str | None = None      # novo
     model: str
-    date: str
+    target_profile: str | None = None
+    prompt_used: str | None = None
+    # id e date REMOVIDOS — gerados pelo servidor em db.py
 
 class SavedNotificationResponse(BaseModel):
+    """Payload retornado nas respostas."""
     id: str
     type: str
     content: str
     persona: str
-    target_profile: str | None = None   # novo
-    prompt_used: str | None = None      # novo
     model: str
     date: str
+    target_profile: str | None = None
+    prompt_used: str | None = None
 
 # Novo schema para o PATCH de avaliação
 class NotificationTypeUpdate(BaseModel):

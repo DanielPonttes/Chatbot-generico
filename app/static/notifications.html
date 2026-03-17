@@ -246,12 +246,12 @@
                             <div id="evalButtons" class="flex gap-2 items-center">
                                 <button
                                     class="text-text dark:text-dark-text-light hover:text-green-400 p-1.5 rounded-md hover:bg-gray-200/50 dark:hover:bg-slate-800 transition-colors"
-                                    title="Boa notificação" onclick="saveNotification('like')">
+                                    title="Boa notificação" onclick="saveNotification('Aprovada')">
                                     <i data-lucide="thumbs-up" class="w-4 h-4"></i>
                                 </button>
                                 <button
                                     class="text-text dark:text-dark-text-light hover:text-red-400 p-1.5 rounded-md hover:bg-gray-200/50 dark:hover:bg-slate-800 transition-colors"
-                                    title="Notificação ruim" onclick="saveNotification('dislike')">
+                                    title="Notificação ruim" onclick="saveNotification('Reprovada')">
                                     <i data-lucide="thumbs-down" class="w-4 h-4"></i>
                                 </button>
                             </div>
@@ -384,6 +384,7 @@
     </div>
 
     <script>
+        const API_BASE = window.location.origin;
         // Init Icons
         // Theme Toggling Logic
         function toggleTheme() {
@@ -427,7 +428,7 @@
         async function loadData() {
             try {
                 // Load Personas (Bot Styles)
-                const resPersonas = await fetch('/personas');
+                const resPersonas = await fetch(`${API_BASE}/personas`);
                 const personas = await resPersonas.json();
                 personaSelect.innerHTML = personas.map(p =>
                     `<option value="${p.id}">${p.name} - ${p.description}</option>`
@@ -491,7 +492,7 @@
                     } : null
                 };
 
-                const res = await fetch('/chat/proactive', {
+                const res = await fetch(`${API_BASE}/chat/proactive`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -511,10 +512,10 @@
                 const evalContainer = document.getElementById('evalButtons');
                 if (evalContainer) {
                     evalContainer.innerHTML = `
-                        <button class="text-text dark:text-dark-text-light hover:text-green-400 p-1.5 rounded-md hover:bg-gray-200/50 dark:hover:bg-slate-800 transition-colors" title="Boa notificação" onclick="saveNotification('like')">
+                        <button class="text-text dark:text-dark-text-light hover:text-green-400 p-1.5 rounded-md hover:bg-gray-200/50 dark:hover:bg-slate-800 transition-colors" title="Boa notificação" onclick="saveNotification('Aprovada')">
                             <i data-lucide="thumbs-up" class="w-4 h-4"></i>
                         </button>
-                        <button class="text-text dark:text-dark-text-light hover:text-red-400 p-1.5 rounded-md hover:bg-gray-200/50 dark:hover:bg-slate-800 transition-colors" title="Notificação ruim" onclick="saveNotification('dislike')">
+                        <button class="text-text dark:text-dark-text-light hover:text-red-400 p-1.5 rounded-md hover:bg-gray-200/50 dark:hover:bg-slate-800 transition-colors" title="Notificação ruim" onclick="saveNotification('Reprovada')">
                             <i data-lucide="thumbs-down" class="w-4 h-4"></i>
                         </button>
                     `;
@@ -537,7 +538,7 @@
         // ==========================================
         // Saved Notifications Manager (SQLite Backend)
         // ==========================================
-        let currentTab = 'like';
+        let currentTab = 'Aprovada';
 
         async function getSavedNotifications() {
             try {
@@ -558,12 +559,10 @@
             if (!contentText) return;
 
             const newItem = {
-                id: Date.now().toString(),
-                type: type, // 'like' or 'dislike'
+                type: type, // 'Aprovada' or 'Reprovada'
                 content: contentText,
                 persona: personaText,
                 model: modelText,
-                date: new Date().toLocaleString()
             };
 
             try {
@@ -609,7 +608,7 @@
             const tabLike = document.getElementById('tab-like');
             const tabDislike = document.getElementById('tab-dislike');
 
-            if (tab === 'like') {
+            if (tab === 'Aprovada') {
                 tabLike.classList.add('border-primary', 'text-primary');
                 tabLike.classList.remove('border-transparent', 'text-text-light');
                 tabDislike.classList.remove('border-danger', 'text-danger');
@@ -653,8 +652,8 @@
             const filtered = allSaved.filter(item => item.type === currentTab);
 
             // Update Counts
-            document.getElementById('count-like').textContent = allSaved.filter(i => i.type === 'like').length;
-            document.getElementById('count-dislike').textContent = allSaved.filter(i => i.type === 'dislike').length;
+            document.getElementById('count-like').textContent = allSaved.filter(i => i.type === 'Aprovada').length;
+            document.getElementById('count-dislike').textContent = allSaved.filter(i => i.type === 'Reprovada').length;
 
             if (filtered.length === 0) {
                 container.innerHTML = `
@@ -730,7 +729,7 @@
             statusEl.textContent = "Verificando...";
             statusEl.className = "text-xs text-text dark:text-dark-text-light";
             try {
-                const res = await fetch('/health');
+                const res = await fetch(`${API_BASE}/health`);
                 const data = await res.json();
                 if (data.status === 'ok' || data.status === 'healthy') {
                     statusEl.textContent = `Online (${data.provider} - ${data.model})`;
@@ -749,7 +748,7 @@
             const dots = document.querySelectorAll('.api-status-dot');
             const texts = document.querySelectorAll('.api-status-text');
             try {
-                const res = await fetch('/health');
+                const res = await fetch(`${API_BASE}/health`);
                 const data = await res.json();
                 const isOk = data.status === 'ok' || data.status === 'healthy';
                 const color = isOk ? 'bg-success' : 'bg-danger';
@@ -815,11 +814,11 @@
 
                 <!-- Tabs -->
                 <div class="flex border-b border-border dark:border-slate-700 shrink-0">
-                    <button onclick="switchTab('like')" id="tab-like"
+                    <button onclick="switchTab('Aprovada')" id="tab-like"
                         class="flex-1 py-3 text-sm font-medium border-b-2 border-primary text-primary transition-colors flex items-center justify-center gap-2">
                         <i data-lucide="thumbs-up" class="w-4 h-4"></i> Aprovadas (<span id="count-like">0</span>)
                     </button>
-                    <button onclick="switchTab('dislike')" id="tab-dislike"
+                    <button onclick="switchTab('Reprovada')" id="tab-dislike"
                         class="flex-1 py-3 text-sm font-medium border-b-2 border-transparent text-text-light hover:text-text dark:hover:text-gray-200 transition-colors flex items-center justify-center gap-2">
                         <i data-lucide="thumbs-down" class="w-4 h-4"></i> Reprovadas (<span id="count-dislike">0</span>)
                     </button>

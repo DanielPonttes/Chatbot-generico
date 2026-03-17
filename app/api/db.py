@@ -4,6 +4,7 @@ import json
 from datetime import datetime
 import logging
 from pathlib import Path
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +104,11 @@ def save_notification(item: dict) -> bool:
         prompt_used     (opcional)
     """
     try:
+
+        new_id   = str(uuid.uuid4())
+        new_date = datetime.now().strftime("%d/%m/%Y, %H:%M:%S")  # mesmo formato que o frontend usava
+
+
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(
@@ -112,14 +118,14 @@ def save_notification(item: dict) -> bool:
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''',
             (
-                item["id"],
+                new_id,
                 item.get("type", "Pendente"),
                 item["content"],
                 item["persona"],
                 item.get("target_profile"),   # None se ausente
                 item.get("prompt_used"),       # None se ausente
                 item["model"],
-                item["date"],
+                new_date,
             ),
         )
         conn.commit()

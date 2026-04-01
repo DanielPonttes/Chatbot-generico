@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  chatbot:
+    build: .
+    container_name: chatbot-economico
+    restart: unless-stopped
+    ports:
+      - "8000:8000"          # ← substitui network_mode: host (compatível Mac/Win/Linux)
+    environment:
+      - PYTHONUNBUFFERED=1
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data

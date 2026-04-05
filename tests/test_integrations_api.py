@@ -92,6 +92,40 @@ class FakeRemoteDatabaseService:
             ],
         }
 
+    def search_rooms(self, query_text="", limit=20):
+        assert limit == 20
+        return [
+            {
+                "id": "2",
+                "label": "Elevador",
+                "description": "(ANG) Anglo | Circulacao | Campus Anglo",
+                "metadata": {"predio_id": "Campus Anglo|(ANG) Anglo"},
+            }
+        ]
+
+    def search_sensors(self, query_text="", room_id=None, limit=20):
+        assert room_id in (None, "2")
+        assert limit == 20
+        return [
+            {
+                "id": "SII-001",
+                "label": "SII Smart - Sala 400D",
+                "description": "SII Smart - Sala 400D | SII_SMART | Elevador",
+                "metadata": {"room_id": "2", "tipo_nome": "SII_SMART"},
+            }
+        ]
+
+    def search_people(self, query_text="", limit=20):
+        assert limit == 20
+        return [
+            {
+                "id": "ravilon",
+                "label": "Ravilon A. Santos",
+                "description": "MAT-001 | ravilon@exemplo.com",
+                "metadata": {},
+            }
+        ]
+
 
 class FakeSpringService:
     def get_connection_info(self):
@@ -203,6 +237,51 @@ def test_list_spring_endpoints(client, monkeypatch):
     data = response.json()
     assert data["connection"]["base_url"] == "http://srv1428963.hstgr.cloud:8080"
     assert data["endpoints"][0]["id"] == "sensor_measurements_latest"
+
+
+def test_lookup_context_rooms(client, monkeypatch):
+    monkeypatch.setattr(
+        routes,
+        "get_remote_postgres_catalog_service",
+        lambda: FakeRemoteDatabaseService(),
+    )
+
+    response = client.get("/integrations/context/rooms?query=elev")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data[0]["id"] == "2"
+    assert data[0]["label"] == "Elevador"
+
+
+def test_lookup_context_sensors(client, monkeypatch):
+    monkeypatch.setattr(
+        routes,
+        "get_remote_postgres_catalog_service",
+        lambda: FakeRemoteDatabaseService(),
+    )
+
+    response = client.get("/integrations/context/sensors?room_id=2")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data[0]["id"] == "SII-001"
+    assert data[0]["metadata"]["room_id"] == "2"
+
+
+def test_lookup_context_people(client, monkeypatch):
+    monkeypatch.setattr(
+        routes,
+        "get_remote_postgres_catalog_service",
+        lambda: FakeRemoteDatabaseService(),
+    )
+
+    response = client.get("/integrations/context/people?query=ravi")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data[0]["id"] == "ravilon"
+    assert "MAT-001" in data[0]["description"]
 
 
 def test_invoke_spring_endpoint(client, monkeypatch):

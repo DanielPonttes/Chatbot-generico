@@ -122,6 +122,14 @@ Endpoints confirmados como úteis no ambiente atual:
 - `GET /api/rooms/{room_id}/medicoes`
 - `GET /api/rooms/{room_id}/medicoes/latest`
 
+### 9. Autocomplete de Contexto Operacional
+
+Rotas usadas pelo frontend para preencher automaticamente sala, sensor e pessoa:
+
+- `GET /integrations/context/rooms?query=&limit=20`
+- `GET /integrations/context/sensors?query=&room_id=&limit=20`
+- `GET /integrations/context/people?query=&limit=20`
+
 ## Modelos de Dados (Schemas)
 
 ### ChatRequest

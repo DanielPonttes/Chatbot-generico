@@ -375,6 +375,34 @@ pytest --cov=app
 
 Os testes usam mocks para não depender de Ollama/HuggingFace rodando.
 
+### Testes E2E com Playwright
+
+Para validar a interface de notificacoes no navegador:
+
+```bash
+npm install
+npx playwright install chromium
+npm run test:e2e
+```
+
+Em Linux/WSL, se o Chromium reclamar de bibliotecas do sistema, prefira:
+
+```bash
+sudo npx playwright install --with-deps chromium
+```
+
+Com navegador visivel:
+
+```bash
+npm run test:e2e:headed
+```
+
+Observacoes:
+
+- A configuracao sobe o FastAPI automaticamente em `http://127.0.0.1:8012` se `PLAYWRIGHT_BASE_URL` nao estiver definido.
+- Se quiser reaproveitar um servidor ja rodando, exporte `PLAYWRIGHT_BASE_URL=http://127.0.0.1:8000` antes do comando.
+- Os cenarios de Playwright mockam `/health`, `/personas`, `/target-profiles`, `/chat/proactive`, `/integrations/context/*` e `/notifications/saved`, entao nao dependem do banco remoto nem do Spring para rodar.
+
 ## ⚠️ Limitações
 
 1. **Modelo pequeno**: O Qwen 0.5B é limitado em raciocínio complexo e pode dar respostas genéricas

@@ -1,6 +1,6 @@
 # 🤖 Chatbot Genérico
 
-> Um chatbot simples e **gratuito** para projetos de faculdade, com suporte a modelos LLM locais via Ollama ou HuggingFace Inference API.
+> Um chatbot com FastAPI, personas, RAG opcional, integrações externas e testes automatizados para fluxos de chat e notificações.
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109%2B-009688.svg)](https://fastapi.tiangolo.com/)
@@ -18,18 +18,21 @@
 - [Estrutura de Pastas](#-estrutura-de-pastas)
 - [API Reference](#-api-reference)
 - [Testes](#-testes)
+- [CI e Qualidade](#-ci-e-qualidade)
 - [Limitações](#-limitações)
 - [Próximos Passos](#-próximos-passos)
 
 ## 🎯 Visão Geral
 
-Este projeto implementa um chatbot de perguntas e respostas em português brasileiro, com:
+Este projeto implementa um chatbot em português brasileiro, com:
 
 - **Memória de conversa**: Mantém contexto das últimas 10 mensagens por sessão
 - **Persona configurável**: Customize o comportamento do bot via variável de ambiente
-- **Múltiplos providers**: Ollama (local, gratuito) ou HuggingFace (API, gratuito com limites)
+- **Múltiplos providers**: Google Gemini, Ollama local ou HuggingFace
 - **API HTTP**: Pronto para integrar com qualquer frontend
-- **Custo zero**: Projetado para rodar em notebooks comuns sem custos
+- **Notificações proativas**: Mensagens com perfil-alvo, RAG e contexto operacional real
+- **Integrações externas**: PostgreSQL remoto e API Spring Boot catalogados pelo backend
+- **Cobertura automatizada**: API validada com `pytest` e interface com Playwright
 
 ### Por que Qwen 2.5 0.5B como modelo padrão?
 
@@ -45,8 +48,9 @@ O **Qwen 2.5 0.5B** foi escolhido como padrão por ser o menor modelo que ainda 
 ## 📦 Requisitos
 
 - **Python 3.11+**
-- **Ollama** (recomendado) ou **HuggingFace Token**
-- ~1GB de espaço em disco (para o modelo)
+- **Node.js 18+** para os testes E2E com Playwright
+- **Ollama**, **API key do Gemini** ou **token HuggingFace**
+- ~1GB de espaço em disco
 - 4GB+ de RAM recomendado
 
 ## 🚀 Instalação
@@ -280,6 +284,9 @@ BOT_SYSTEM_PROMPT=Você é um professor de programação paciente e didático. E
 
 ```
 chatbot-generico/
+├── .github/
+│   └── workflows/
+│       └── ci.yml                # Pipeline GitHub Actions
 ├── app/                           # Código da aplicação
 │   ├── __init__.py
 │   ├── main.py                    # Entry point FastAPI
@@ -291,17 +298,27 @@ chatbot-generico/
 │   │   └── schemas.py             # Schemas request/response
 │   ├── services/
 │   │   ├── __init__.py
-│   │   ├── llm_provider.py        # Providers LLM (Ollama, HuggingFace)
+│   │   ├── llm_provider.py        # Providers LLM (Gemini, Ollama, HuggingFace)
+│   │   ├── integration_catalog.py # Catálogo PostgreSQL + Spring
+│   │   ├── proactive_context.py   # Contexto operacional das notificações
 │   │   └── memory.py              # Gerenciador de memória
 │   └── api/
 │       ├── __init__.py
-│       └── routes.py              # Endpoints /chat, /health
+│       └── routes.py              # Endpoints /chat, /health, /integrations
+├── docs/                          # Documentação funcional e operacional
+├── scripts/
+│   └── apply_branch_protection.sh # Aplica proteção da branch main
 ├── tests/                         # Testes automatizados
 │   ├── __init__.py
 │   ├── conftest.py                # Fixtures pytest
-│   └── test_api.py                # Testes dos endpoints
+│   ├── test_api.py                # Testes dos endpoints principais
+│   ├── test_integrations_api.py   # Testes do catálogo remoto
+│   ├── test_proactive_context.py  # Testes do contexto operacional
+│   └── e2e/                       # Fluxos Playwright da interface
+├── package.json                   # Setup do Playwright
+├── playwright.config.js           # Runner E2E
 ├── .env.example                   # Template de configuração
-├── pyproject.toml                 # Dependências (Poetry/setuptools)
+├── pyproject.toml                 # Dependências Python
 ├── requirements.txt               # Dependências (pip)
 └── README.md                      # Este arquivo
 ```
@@ -325,7 +342,7 @@ Envia uma mensagem e recebe a resposta do chatbot.
 {
   "session_id": "string",
   "reply": "string",
-  "provider": "ollama | huggingface",
+  "provider": "google | ollama | huggingface",
   "model": "string"
 }
 ```
@@ -342,13 +359,47 @@ Verifica o status da aplicação.
 **Response:**
 ```json
 {
-  "status": "healthy | degraded | unhealthy",
-  "provider": "string",
-  "model": "string",
-  "provider_available": true | false,
-  "message": "string | null"
+  "status": "healthy | degraded",
+  "provider": "google",
+  "model": "gemini-3-flash-preview",
+  "provider_available": true,
+  "message": null
 }
 ```
+
+### POST /chat/proactive
+
+Gera uma mensagem proativa baseada em:
+
+- persona
+- perfil-alvo
+- override de modelo
+- `use_rag`
+- contexto operacional real via `room_id`, `sensor_external_id` e `pessoa_id`
+
+**Campos adicionais de resposta:**
+```json
+{
+  "reply": "string",
+  "context_summary": "string | null"
+}
+```
+
+### GET /integrations/catalog
+
+Retorna o catálogo consolidado de:
+
+- PostgreSQL remoto
+- endpoints Spring Boot
+- recomendações dos recursos mais relevantes
+
+### GET /integrations/context/*
+
+Endpoints usados pela tela `/notifications` para autocomplete de:
+
+- salas
+- sensores
+- pessoas
 
 ### GET /docs
 
@@ -360,20 +411,13 @@ Documentação alternativa (ReDoc).
 
 ## 🧪 Testes
 
-Execute os testes com pytest:
+Execute os testes de API com pytest:
 
 ```bash
-# Rodar todos os testes
-pytest
-
-# Com output verboso
-pytest -v
-
-# Com cobertura
-pytest --cov=app
+./venv/bin/pytest tests/test_api.py tests/test_integrations_api.py tests/test_proactive_context.py -q
 ```
 
-Os testes usam mocks para não depender de Ollama/HuggingFace rodando.
+Os testes usam mocks para não depender de Ollama, Gemini, banco remoto ou Spring Boot.
 
 ### Testes E2E com Playwright
 
@@ -402,6 +446,38 @@ Observacoes:
 - A configuracao sobe o FastAPI automaticamente em `http://127.0.0.1:8012` se `PLAYWRIGHT_BASE_URL` nao estiver definido.
 - Se quiser reaproveitar um servidor ja rodando, exporte `PLAYWRIGHT_BASE_URL=http://127.0.0.1:8000` antes do comando.
 - Os cenarios de Playwright mockam `/health`, `/personas`, `/target-profiles`, `/chat/proactive`, `/integrations/context/*` e `/notifications/saved`, entao nao dependem do banco remoto nem do Spring para rodar.
+
+## 🔒 CI e Qualidade
+
+O repositório possui pipeline em [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) com duas gates:
+
+- `Pytest`
+- `Playwright E2E`
+
+Os mesmos checks podem ser executados localmente com:
+
+```bash
+./venv/bin/pytest tests/test_api.py tests/test_integrations_api.py tests/test_proactive_context.py -q
+npm run test:e2e
+```
+
+Proteção recomendada para a branch `main`:
+
+- merge apenas via pull request
+- pelo menos 1 aprovação
+- dismiss de reviews obsoletos
+- conversation resolution obrigatória
+- status checks obrigatórios: `Pytest` e `Playwright E2E`
+- bloqueio de force-push e delete
+
+Para aplicar a política via API do GitHub:
+
+```bash
+export GITHUB_TOKEN=seu_token_com_administration_write
+./scripts/apply_branch_protection.sh DanielPonttes/Chatbot-generico main
+```
+
+Detalhes em [`docs/setup/ci.md`](./docs/setup/ci.md).
 
 ## ⚠️ Limitações
 

@@ -236,6 +236,9 @@
                                     <span class="text-xs text-gray-400 dark:text-gray-500">Agora</span>
                                 </div>
                                 <p id="notifContent" class="text-text dark:text-dark-text leading-relaxed"></p>
+                                <p id="notifContextSummary"
+                                    class="hidden text-xs text-text-light dark:text-gray-400 leading-relaxed bg-gray-50 dark:bg-slate-800/80 rounded-lg px-3 py-2 mt-3">
+                                </p>
                             </div>
                         </div>
 
@@ -357,6 +360,23 @@
                         nesta requisição.
                     </p>
 
+                    <!-- Live Operational Context -->
+                    <div class="space-y-3 mt-4 pt-4 border-t border-border dark:border-dark-border">
+                        <div class="flex items-center justify-between">
+                            <label class="text-sm font-medium text-text dark:text-dark-text">Contexto Operacional Real</label>
+                            <span class="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded">Spring + PG</span>
+                        </div>
+                        <p class="text-xs text-gray-400 dark:text-gray-500">
+                            Se preenchido, a notificação usa dados reais de sala, sensor e pessoa antes de chamar o LLM.
+                        </p>
+                        <input id="roomIdInput" type="text" placeholder="Room ID / Compartimento ID (ex: 2)"
+                            class="w-full bg-gray-50 dark:bg-slate-800 border border-border dark:border-dark-border text-text dark:text-dark-text rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none text-sm">
+                        <input id="sensorExternalIdInput" type="text" placeholder="Sensor External ID (ex: SII-001)"
+                            class="w-full bg-gray-50 dark:bg-slate-800 border border-border dark:border-dark-border text-text dark:text-dark-text rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none text-sm">
+                        <input id="pessoaIdInput" type="text" placeholder="Pessoa ID (ex: ravilon)"
+                            class="w-full bg-gray-50 dark:bg-slate-800 border border-border dark:border-dark-border text-text dark:text-dark-text rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none text-sm">
+                    </div>
+
                     <!-- Persona Override -->
                     <div class="space-y-2">
                         <div class="flex items-center justify-between">
@@ -406,6 +426,7 @@
         const loadingState = document.getElementById('loadingState');
         const notifContent = document.getElementById('notifContent');
         const notifPersonaName = document.getElementById('notifPersonaName');
+        const notifContextSummary = document.getElementById('notifContextSummary');
         const modelUsedTag = document.getElementById('modelUsedTag');
 
         const configBtn = document.getElementById('configBtn');
@@ -414,13 +435,20 @@
         const saveConfigBtn = document.getElementById('saveConfigBtn');
         const modalBackdrop = document.getElementById('modalBackdrop');
 
-        const modelOverrideSelect = document.getElementById('modelOverride');
+        const modelOverrideSelect = document.getElementById('modelOverrideSelect');
         const systemPromptOverride = document.getElementById('systemPromptOverride');
+        const roomIdInput = document.getElementById('roomIdInput');
+        const sensorExternalIdInput = document.getElementById('sensorExternalIdInput');
+        const pessoaIdInput = document.getElementById('pessoaIdInput');
 
         // State
         let config = {
             modelOverride: "",
-            personaPrompt: ""
+            personaPrompt: "",
+            use_rag: true,
+            roomId: "",
+            sensorExternalId: "",
+            pessoaId: ""
         };
 
         // Load Data
@@ -486,6 +514,9 @@
                     target_profile_id: targetProfileId || null,
                     model_override: config.modelOverride || null,
                     use_rag: config.use_rag !== false, // Default to true if undefined
+                    room_id: config.roomId || null,
+                    sensor_external_id: config.sensorExternalId || null,
+                    pessoa_id: config.pessoaId || null,
                     persona_override: config.personaPrompt ? {
                         system_prompt: config.personaPrompt
                     } : null
@@ -506,6 +537,13 @@
                 document.getElementById('notifPersonaName').textContent = config.personaPrompt ? "Persona Customizada" : personaName;
                 document.getElementById('notifContent').textContent = data.reply;
                 document.getElementById('modelUsedTag').textContent = `Modelo: ${data.model}`;
+                if (data.context_summary) {
+                    notifContextSummary.textContent = `Contexto aplicado: ${data.context_summary}`;
+                    notifContextSummary.classList.remove('hidden');
+                } else {
+                    notifContextSummary.textContent = "";
+                    notifContextSummary.classList.add('hidden');
+                }
 
                 // Reset evaluation buttons to allow voting
                 const evalContainer = document.getElementById('evalButtons');
@@ -704,14 +742,17 @@
         modalBackdrop.addEventListener('click', () => toggleModal(false));
 
         saveConfigBtn.addEventListener('click', () => {
-            config.modelOverride = document.getElementById('modelOverrideSelect').value;
-            config.personaPrompt = document.getElementById('systemPromptOverride').value.trim();
+            config.modelOverride = modelOverrideSelect.value;
+            config.personaPrompt = systemPromptOverride.value.trim();
             config.use_rag = document.getElementById('useRagToggle').checked;
+            config.roomId = roomIdInput.value.trim();
+            config.sensorExternalId = sensorExternalIdInput.value.trim();
+            config.pessoaId = pessoaIdInput.value.trim();
             toggleModal(false);
 
             // Visual feedback on config button if active
             const configBtn = document.getElementById('configBtn');
-            if (config.modelOverride || config.personaPrompt || !config.use_rag) {
+            if (config.modelOverride || config.personaPrompt || !config.use_rag || config.roomId || config.sensorExternalId || config.pessoaId) {
                 configBtn.classList.add('text-primary-light', 'border-primary/50');
             } else {
                 configBtn.classList.remove('text-primary-light', 'border-primary/50');

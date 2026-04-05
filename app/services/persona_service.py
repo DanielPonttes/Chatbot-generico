@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from app.services.llm_provider import get_llm_provider, LLMProviderError
+from app.services.proactive_context import get_proactive_operational_context_service
 from app.rag.retriever import get_relevant_context
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,12 @@ class TargetProfile:
     name: str
     description: str
     context: str
+
+
+@dataclass
+class ProactiveMessageResult:
+    message: str
+    context_summary: str | None = None
 
 # Configuração das 3 personas (tons) do Bot
 PERSONAS = [
@@ -113,8 +120,11 @@ class PersonaService:
         target_profile_id: Optional[str] = None,
         persona_override: Optional[object] = None, 
         model_override: Optional[str] = None,
-        use_rag: bool = True
-    ) -> str:
+        use_rag: bool = True,
+        room_id: Optional[str] = None,
+        sensor_external_id: Optional[str] = None,
+        pessoa_id: Optional[str] = None,
+    ) -> ProactiveMessageResult:
         """
         Gera uma mensagem proativa baseada na persona escolhida e no perfil do usuário alvo.
         
@@ -138,6 +148,12 @@ class PersonaService:
                     f"Descrição: {target_profile.context}\n"
                     "Adapte sua mensagem especificamente para este tipo de usuário, tentando engajá-lo da melhor forma possível dado o seu comportamento."
                 )
+
+        operational_context = get_proactive_operational_context_service().build_context(
+            room_id=room_id,
+            sensor_external_id=sensor_external_id,
+            pessoa_id=pessoa_id,
+        )
         
         provider = get_llm_provider()
         
@@ -165,7 +181,7 @@ class PersonaService:
 
         # Cria um prompt específico para gerar a mensagem inicial
         prompt = (
-            f"Atue com a seguinte persona:\n{system_prompt}\n{target_context}\n{rag_context}\n"
+            f"Atue com a seguinte persona:\n{system_prompt}\n{target_context}\n{operational_context.prompt_block}\n{rag_context}\n"
             "Gere uma notificação curta (push notification) de 1 a 2 frases para o celular do usuário. "
             "Seja direto e mantenha sua personalidade intrínseca."
         )
@@ -173,7 +189,10 @@ class PersonaService:
         try:
             # Reutilizamos o método generate do provider com override de modelo se houver
             message = await provider.generate(prompt, model_override=model_override)
-            return message
+            return ProactiveMessageResult(
+                message=message,
+                context_summary=operational_context.summary,
+            )
         except Exception as e:
             logger.error(f"Erro ao gerar mensagem proativa para {persona_id}: {e}")
             raise LLMProviderError(f"Falha na geração de mensagem: {e}")

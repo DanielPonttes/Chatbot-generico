@@ -134,6 +134,9 @@ Endpoints confirmados como úteis no ambiente atual:
 - `target_profile_id` (str, opcional): ID do perfil do usuário alvo (Ex: "gastao").
 - `model_override` (str, opcional): Nome do modelo LLM.
 - `persona_override` (PersonaOverride, opcional): Permite definir um System Prompt customizado temporário.
+- `room_id` (str, opcional): ID do compartimento/sala para buscar o contexto real.
+- `sensor_external_id` (str, opcional): External ID do sensor para buscar a última medição.
+- `pessoa_id` (str, opcional): ID da pessoa para enriquecer a notificação com dados reais do backend.
 
 ### PersonaOverride
 - `description` (str, opcional)

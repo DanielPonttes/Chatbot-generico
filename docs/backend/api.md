@@ -20,9 +20,9 @@ Verifica a saúde do serviço e o status do provedor LLM.
 - **Resposta**:
     ```json
     {
-      "status": "ok",
-      "provider": "google_gemini",
-      "model": "gemini-2.0-flash",
+      "status": "healthy",
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
       "provider_available": true
     }
     ```
@@ -58,15 +58,28 @@ Gera uma mensagem inicial baseada em uma persona e perfil de usuário alvo.
 - **Corpo da Requisição (`ProactiveChatRequest`)**:
     ```json
     {
-      "persona_id": "debochado",
+      "persona_id": "provocador",
       "target_profile_id": "gastao", // Opcional
       "model_override": "gemini-3-pro-preview", // Opcional
+      "use_rag": true, // Opcional
+      "room_id": "2", // Opcional
+      "sensor_external_id": "SII-001", // Opcional
+      "pessoa_id": "ravilon", // Opcional
       "persona_override": { // Opcional
         "system_prompt": "string"
       }
     }
     ```
-- **Resposta**: Mesmo formato de `ChatResponse`.
+- **Resposta (`ChatResponse`)**:
+    ```json
+    {
+      "session_id": "new-session",
+      "reply": "string",
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
+      "context_summary": "string | null"
+    }
+    ```
 
 ### 4. Listar Personas
 Retorna as personas disponíveis para o bot.
@@ -130,6 +143,15 @@ Rotas usadas pelo frontend para preencher automaticamente sala, sensor e pessoa:
 - `GET /integrations/context/sensors?query=&room_id=&limit=20`
 - `GET /integrations/context/people?query=&limit=20`
 
+### 10. Notificações Salvas
+
+Endpoints usados pela tela `/notifications` para persistir feedback:
+
+- `GET /notifications/saved`
+- `POST /notifications/saved`
+- `DELETE /notifications/saved/{notif_id}`
+- `DELETE /notifications/saved/all`
+
 ## Modelos de Dados (Schemas)
 
 ### ChatRequest
@@ -141,6 +163,7 @@ Rotas usadas pelo frontend para preencher automaticamente sala, sensor e pessoa:
 - `persona_id` (str): ID da persona do bot (Ex: "provocador").
 - `target_profile_id` (str, opcional): ID do perfil do usuário alvo (Ex: "gastao").
 - `model_override` (str, opcional): Nome do modelo LLM.
+- `use_rag` (bool, opcional): Ativa ou desativa a busca na base de conhecimento.
 - `persona_override` (PersonaOverride, opcional): Permite definir um System Prompt customizado temporário.
 - `room_id` (str, opcional): ID do compartimento/sala para buscar o contexto real.
 - `sensor_external_id` (str, opcional): External ID do sensor para buscar a última medição.
@@ -149,3 +172,10 @@ Rotas usadas pelo frontend para preencher automaticamente sala, sensor e pessoa:
 ### PersonaOverride
 - `description` (str, opcional)
 - `system_prompt` (str, opcional)
+
+### ChatResponse
+- `session_id` (str)
+- `reply` (str)
+- `provider` (str)
+- `model` (str)
+- `context_summary` (str, opcional): resumo textual do contexto operacional aplicado

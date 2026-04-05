@@ -304,9 +304,9 @@
     <!-- Config Modal -->
     <div id="configModal" class="fixed inset-0 z-50 hidden">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="modalBackdrop"></div>
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-6">
+        <div class="absolute inset-x-0 top-4 bottom-4 mx-auto w-[calc(100%-2rem)] max-w-md">
             <div
-                class="glass-panel bg-white dark:bg-dark-card rounded-2xl shadow-2xl p-6 space-y-6 border border-border dark:border-dark-border">
+                class="glass-panel bg-white dark:bg-dark-card rounded-2xl shadow-2xl p-6 border border-border dark:border-dark-border h-full max-h-full flex flex-col overflow-hidden">
 
                 <div class="flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-text dark:text-dark-text">Configurações & Status</h3>
@@ -316,7 +316,7 @@
                     </button>
                 </div>
 
-                <div class="space-y-4">
+                <div class="space-y-4 overflow-y-auto flex-1 pr-1">
                     <!-- LLM Service Health -->
                     <div
                         class="p-4 bg-gray-50 dark:bg-slate-800 rounded-lg border border-border dark:border-dark-border">
@@ -395,7 +395,7 @@
                     </div>
                 </div>
 
-                <div class="flex justify-end pt-2">
+                <div class="flex justify-end pt-4 mt-4 border-t border-border dark:border-dark-border shrink-0">
                     <button id="saveConfigBtn"
                         class="bg-primary hover:bg-primary-light text-text dark:text-dark-text px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors">
                         Salvar e Fechar

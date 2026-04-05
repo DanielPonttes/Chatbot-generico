@@ -147,15 +147,12 @@ class TestChatEndpoint:
 class TestRootEndpoint:
     """Testes para o endpoint raiz /."""
     
-    def test_root_returns_welcome_message(self, client):
+    def test_root_returns_html_page(self, client):
         """
-        / deve retornar mensagem de boas-vindas com links úteis.
+        / deve servir a interface HTML principal.
         """
         response = client.get("/")
         
         assert response.status_code == 200
-        data = response.json()
-        
-        assert "message" in data
-        assert "docs" in data
-        assert data["docs"] == "/docs"
+        assert "text/html" in response.headers["content-type"]
+        assert "<html" in response.text.lower()

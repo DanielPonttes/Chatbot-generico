@@ -1,13 +1,18 @@
 import os
 from typing import List, Dict, Any
-from .vector_db import get_vector_store
+
+
+def _get_vector_store():
+    from .vector_db import get_vector_store
+
+    return get_vector_store()
 
 def get_relevant_context(query: str, k: int = 4):
     """
     Busca no banco vetorial os K chunks mais relevantes para a query passada.
     Retorna uma string única com os conteúdos combinados.
     """
-    vector_store = get_vector_store()
+    vector_store = _get_vector_store()
     
     # Faz a busca por similaridade
     docs = vector_store.similarity_search(query, k=k)
@@ -25,7 +30,7 @@ def search_with_metadata(query: str, k: int = 4) -> List[Dict[str, Any]]:
     com os metadados (como nome do arquivo PDF original da página).
     Usado pelo frontend de visualização RAG.
     """
-    vector_store = get_vector_store()
+    vector_store = _get_vector_store()
     
     # search_with_score retorna os documentos e a similaridade
     results = vector_store.similarity_search_with_score(query, k=k)

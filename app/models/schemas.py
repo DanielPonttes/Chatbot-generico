@@ -4,8 +4,8 @@ Schemas Pydantic para validação de requests e responses.
 Define os modelos de dados usados na API.
 """
 
-from typing import Literal
-from pydantic import BaseModel, Field
+from typing import Any, Literal
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ChatRequest(BaseModel):
@@ -162,6 +162,130 @@ class HealthResponse(BaseModel):
     )
 
 
+class RemoteDatabaseConnectionResponse(BaseModel):
+    """Configuração e estado da conexão com o PostgreSQL remoto."""
+
+    host: str
+    port: int
+    database: str
+    user: str
+    sslmode: str
+    status: str | None = None
+    database_name: str | None = None
+    current_user: str | None = None
+
+
+class RemoteDatabaseColumnResponse(BaseModel):
+    """Metadados de uma coluna do banco remoto."""
+
+    name: str
+    data_type: str
+    nullable: bool
+    is_primary_key: bool = False
+    references: str | None = None
+
+
+class RemoteDatabaseTableResponse(BaseModel):
+    """Resumo de uma tabela do banco remoto."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    schema_name: str = Field(alias="schema", serialization_alias="schema")
+    table: str
+    columns_count: int
+    estimated_rows: int | None = None
+    category: str
+    relevance_score: int
+    relevance_reason: str
+    preview_endpoint: str
+
+
+class RemoteDatabaseTableDetailResponse(RemoteDatabaseTableResponse):
+    """Detalhe expandido de uma tabela remota."""
+
+    columns: list[RemoteDatabaseColumnResponse]
+
+
+class RemoteDatabaseCatalogResponse(BaseModel):
+    """Catálogo explorável do PostgreSQL remoto."""
+
+    connection: RemoteDatabaseConnectionResponse
+    tables: list[RemoteDatabaseTableResponse]
+
+
+class RemoteDatabaseRowsResponse(BaseModel):
+    """Amostra paginada de linhas de uma tabela remota."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    schema_name: str = Field(alias="schema", serialization_alias="schema")
+    table: str
+    limit: int
+    offset: int
+    row_count: int
+    rows: list[dict[str, Any]]
+
+
+class SpringEndpointResponse(BaseModel):
+    """Metadados de um endpoint da API Spring remota."""
+
+    id: str
+    category: str
+    method: str
+    path_template: str
+    description: str
+    discovery_source: str
+    relevance_score: int
+    relevance_reason: str
+    invoke_supported: bool = True
+    side_effect: bool = False
+    example_path_params: dict[str, str] = Field(default_factory=dict)
+    example_query_params: dict[str, str] = Field(default_factory=dict)
+    example_body: dict[str, Any] | list[Any] | None = None
+
+
+class SpringApiCatalogResponse(BaseModel):
+    """Catálogo explorável da API Spring Boot remota."""
+
+    connection: dict[str, Any]
+    endpoints: list[SpringEndpointResponse]
+
+
+class SpringEndpointInvokeRequest(BaseModel):
+    """Payload para invocação proxy de um endpoint Spring catalogado."""
+
+    path_params: dict[str, str] = Field(default_factory=dict)
+    query_params: dict[str, Any] = Field(default_factory=dict)
+    body: dict[str, Any] | list[Any] | None = None
+
+
+class SpringEndpointInvokeResponse(BaseModel):
+    """Resposta padronizada após invocar um endpoint remoto."""
+
+    endpoint_id: str
+    method: str
+    path_template: str
+    final_url: str
+    status_code: int
+    content_type: str
+    data: Any
+
+
+class IntegrationsRecommendationResponse(BaseModel):
+    """Recursos externos priorizados para o projeto atual."""
+
+    database_tables: list[RemoteDatabaseTableResponse]
+    spring_endpoints: list[SpringEndpointResponse]
+
+
+class IntegrationsCatalogResponse(BaseModel):
+    """Visão consolidada das integrações externas disponíveis."""
+
+    database: RemoteDatabaseCatalogResponse
+    spring_api: SpringApiCatalogResponse
+    recommendations: IntegrationsRecommendationResponse
+
+
 class ErrorResponse(BaseModel):
     """Response padrão para erros."""
     
@@ -197,4 +321,3 @@ class SavedNotificationCreate(SavedNotificationItem):
 class SavedNotificationResponse(SavedNotificationItem):
     """Response com item salvo."""
     pass
-

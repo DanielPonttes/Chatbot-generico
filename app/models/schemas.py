@@ -273,6 +273,15 @@ class SpringApiCatalogResponse(BaseModel):
     endpoints: list[SpringEndpointResponse]
 
 
+class ContextLookupOptionResponse(BaseModel):
+    """Opção de autocomplete para sala, sensor ou pessoa."""
+
+    id: str
+    label: str
+    description: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
 class SpringEndpointInvokeRequest(BaseModel):
     """Payload para invocação proxy de um endpoint Spring catalogado."""
 

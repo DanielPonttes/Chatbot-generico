@@ -631,6 +631,179 @@ class RemotePostgresCatalogService:
             cursor.execute(query, (pessoa_id,))
             return cursor.fetchone()
 
+    def search_rooms(self, query_text: str = "", limit: int = 20) -> list[dict[str, Any]]:
+        pattern = f"%{query_text.strip()}%"
+        query = """
+            select
+                c.id,
+                c.nome,
+                c.tipo,
+                c.predio_id,
+                c.unidade_id,
+                p.nome as predio_nome,
+                ca.nome as campus_nome
+            from public.compartimento c
+            left join public.predio p on p.id = c.predio_id
+            left join public.campus ca on ca.nome = p.campus_id
+            where (
+                %s = ''
+                or c.id ilike %s
+                or c.nome ilike %s
+                or coalesce(c.tipo, '') ilike %s
+                or coalesce(p.nome, '') ilike %s
+                or coalesce(ca.nome, '') ilike %s
+            )
+            order by c.nome, c.id
+            limit %s
+        """
+
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                query,
+                (
+                    query_text.strip(),
+                    pattern,
+                    pattern,
+                    pattern,
+                    pattern,
+                    pattern,
+                    limit,
+                ),
+            )
+            rows = cursor.fetchall()
+
+        options: list[dict[str, Any]] = []
+        for row in rows:
+            description_parts = [
+                part
+                for part in [row.get("predio_nome"), row.get("tipo"), row.get("campus_nome")]
+                if part
+            ]
+            options.append(
+                {
+                    "id": row["id"],
+                    "label": row["nome"],
+                    "description": " | ".join(description_parts) if description_parts else None,
+                    "metadata": {
+                        "predio_id": row.get("predio_id"),
+                        "unidade_id": row.get("unidade_id"),
+                    },
+                }
+            )
+        return options
+
+    def search_sensors(
+        self,
+        query_text: str = "",
+        room_id: str | None = None,
+        limit: int = 20,
+    ) -> list[dict[str, Any]]:
+        pattern = f"%{query_text.strip()}%"
+        room_filter = room_id or ""
+        query = """
+            select
+                s.external_id,
+                s.nome,
+                s.tipo_nome,
+                s.compartimento_id,
+                c.nome as compartimento_nome
+            from public.sensor s
+            left join public.compartimento c on c.id = s.compartimento_id
+            where (
+                %s = ''
+                or s.external_id ilike %s
+                or s.nome ilike %s
+                or coalesce(s.tipo_nome, '') ilike %s
+                or coalesce(c.nome, '') ilike %s
+            )
+              and (%s = '' or s.compartimento_id = %s)
+            order by s.nome, s.external_id
+            limit %s
+        """
+
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                query,
+                (
+                    query_text.strip(),
+                    pattern,
+                    pattern,
+                    pattern,
+                    pattern,
+                    room_filter,
+                    room_filter,
+                    limit,
+                ),
+            )
+            rows = cursor.fetchall()
+
+        options: list[dict[str, Any]] = []
+        for row in rows:
+            description_parts = [
+                part
+                for part in [row.get("nome"), row.get("tipo_nome"), row.get("compartimento_nome")]
+                if part
+            ]
+            options.append(
+                {
+                    "id": row["external_id"],
+                    "label": row["nome"] or row["external_id"],
+                    "description": " | ".join(description_parts) if description_parts else None,
+                    "metadata": {
+                        "room_id": row.get("compartimento_id"),
+                        "tipo_nome": row.get("tipo_nome"),
+                    },
+                }
+            )
+        return options
+
+    def search_people(self, query_text: str = "", limit: int = 20) -> list[dict[str, Any]]:
+        pattern = f"%{query_text.strip()}%"
+        query = """
+            select
+                id,
+                nome,
+                email,
+                matricula
+            from public.pessoa
+            where (
+                %s = ''
+                or id ilike %s
+                or nome ilike %s
+                or coalesce(email, '') ilike %s
+                or coalesce(matricula, '') ilike %s
+            )
+            order by nome, id
+            limit %s
+        """
+
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                query,
+                (
+                    query_text.strip(),
+                    pattern,
+                    pattern,
+                    pattern,
+                    pattern,
+                    limit,
+                ),
+            )
+            rows = cursor.fetchall()
+
+        options: list[dict[str, Any]] = []
+        for row in rows:
+            description_parts = [part for part in [row.get("matricula"), row.get("email")] if part]
+            options.append(
+                {
+                    "id": row["id"],
+                    "label": row["nome"],
+                    "description": " | ".join(description_parts) if description_parts else None,
+                    "metadata": {},
+                }
+            )
+        return options
+
 
 class SpringApiCatalogService:
     """Lista e invoca endpoints da API Spring Boot remota."""

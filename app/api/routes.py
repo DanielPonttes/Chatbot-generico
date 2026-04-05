@@ -25,6 +25,7 @@ from app.models.schemas import (
     RemoteDatabaseRowsResponse,
     RemoteDatabaseTableDetailResponse,
     SpringApiCatalogResponse,
+    ContextLookupOptionResponse,
     SpringEndpointInvokeRequest,
     SpringEndpointInvokeResponse,
     IntegrationsCatalogResponse,
@@ -448,6 +449,73 @@ async def list_spring_endpoints() -> SpringApiCatalogResponse:
         connection=service.get_connection_info(),
         endpoints=service.list_endpoints(),
     )
+
+
+@router.get(
+    "/integrations/context/rooms",
+    response_model=list[ContextLookupOptionResponse],
+    tags=["integrations"],
+    summary="Buscar salas/compartimentos para autocomplete",
+)
+async def lookup_rooms(
+    query: str = Query(default="", max_length=100),
+    limit: int = Query(default=20, ge=1, le=50),
+) -> list[ContextLookupOptionResponse]:
+    service = get_remote_postgres_catalog_service()
+
+    try:
+        return [ContextLookupOptionResponse(**item) for item in service.search_rooms(query, limit)]
+    except RemoteDatabaseError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "remote_database_unavailable", "message": str(e)},
+        )
+
+
+@router.get(
+    "/integrations/context/sensors",
+    response_model=list[ContextLookupOptionResponse],
+    tags=["integrations"],
+    summary="Buscar sensores para autocomplete",
+)
+async def lookup_sensors(
+    query: str = Query(default="", max_length=100),
+    room_id: str | None = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=50),
+) -> list[ContextLookupOptionResponse]:
+    service = get_remote_postgres_catalog_service()
+
+    try:
+        return [
+            ContextLookupOptionResponse(**item)
+            for item in service.search_sensors(query, room_id=room_id, limit=limit)
+        ]
+    except RemoteDatabaseError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "remote_database_unavailable", "message": str(e)},
+        )
+
+
+@router.get(
+    "/integrations/context/people",
+    response_model=list[ContextLookupOptionResponse],
+    tags=["integrations"],
+    summary="Buscar pessoas para autocomplete",
+)
+async def lookup_people(
+    query: str = Query(default="", max_length=100),
+    limit: int = Query(default=20, ge=1, le=50),
+) -> list[ContextLookupOptionResponse]:
+    service = get_remote_postgres_catalog_service()
+
+    try:
+        return [ContextLookupOptionResponse(**item) for item in service.search_people(query, limit)]
+    except RemoteDatabaseError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "remote_database_unavailable", "message": str(e)},
+        )
 
 
 @router.post(

@@ -369,12 +369,15 @@
                         <p class="text-xs text-gray-400 dark:text-gray-500">
                             Se preenchido, a notificação usa dados reais de sala, sensor e pessoa antes de chamar o LLM.
                         </p>
-                        <input id="roomIdInput" type="text" placeholder="Room ID / Compartimento ID (ex: 2)"
+                        <input id="roomLookupInput" type="text" list="roomLookupList" placeholder="Busque por sala, id ou prédio"
                             class="w-full bg-gray-50 dark:bg-slate-800 border border-border dark:border-dark-border text-text dark:text-dark-text rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none text-sm">
-                        <input id="sensorExternalIdInput" type="text" placeholder="Sensor External ID (ex: SII-001)"
+                        <datalist id="roomLookupList"></datalist>
+                        <input id="sensorLookupInput" type="text" list="sensorLookupList" placeholder="Busque por sensor ou selecione a sala primeiro"
                             class="w-full bg-gray-50 dark:bg-slate-800 border border-border dark:border-dark-border text-text dark:text-dark-text rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none text-sm">
-                        <input id="pessoaIdInput" type="text" placeholder="Pessoa ID (ex: ravilon)"
+                        <datalist id="sensorLookupList"></datalist>
+                        <input id="personLookupInput" type="text" list="personLookupList" placeholder="Busque por pessoa, matrícula ou email"
                             class="w-full bg-gray-50 dark:bg-slate-800 border border-border dark:border-dark-border text-text dark:text-dark-text rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none text-sm">
+                        <datalist id="personLookupList"></datalist>
                     </div>
 
                     <!-- Persona Override -->
@@ -437,9 +440,12 @@
 
         const modelOverrideSelect = document.getElementById('modelOverrideSelect');
         const systemPromptOverride = document.getElementById('systemPromptOverride');
-        const roomIdInput = document.getElementById('roomIdInput');
-        const sensorExternalIdInput = document.getElementById('sensorExternalIdInput');
-        const pessoaIdInput = document.getElementById('pessoaIdInput');
+        const roomLookupInput = document.getElementById('roomLookupInput');
+        const roomLookupList = document.getElementById('roomLookupList');
+        const sensorLookupInput = document.getElementById('sensorLookupInput');
+        const sensorLookupList = document.getElementById('sensorLookupList');
+        const personLookupInput = document.getElementById('personLookupInput');
+        const personLookupList = document.getElementById('personLookupList');
 
         // State
         let config = {
@@ -447,9 +453,116 @@
             personaPrompt: "",
             use_rag: true,
             roomId: "",
+            roomDisplay: "",
             sensorExternalId: "",
-            pessoaId: ""
+            sensorDisplay: "",
+            pessoaId: "",
+            personDisplay: ""
         };
+
+        function debounce(fn, delay = 250) {
+            let timeoutId;
+            return (...args) => {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => fn(...args), delay);
+            };
+        }
+
+        function extractLookupId(value) {
+            if (!value) return "";
+            return value.split('|')[0].trim();
+        }
+
+        function formatLookupOption(option) {
+            const parts = [option.id, option.label];
+            if (option.description) parts.push(option.description);
+            return parts.join(' | ');
+        }
+
+        function escapeHtml(value) {
+            return value
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('"', '&quot;');
+        }
+
+        function populateLookupList(datalistEl, options) {
+            datalistEl.innerHTML = options.map(option => {
+                const displayValue = escapeHtml(formatLookupOption(option));
+                return `<option value="${displayValue}"></option>`;
+            }).join('');
+        }
+
+        async function fetchLookupOptions(endpoint, params = {}) {
+            const search = new URLSearchParams();
+            Object.entries(params).forEach(([key, value]) => {
+                if (value !== undefined && value !== null && value !== '') {
+                    search.set(key, value);
+                }
+            });
+
+            const queryString = search.toString();
+            const url = queryString ? `${endpoint}?${queryString}` : endpoint;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`Falha ao buscar opções em ${endpoint}`);
+            return await res.json();
+        }
+
+        async function refreshRoomLookupOptions(query = '') {
+            try {
+                const options = await fetchLookupOptions('/integrations/context/rooms', { query, limit: 20 });
+                populateLookupList(roomLookupList, options);
+            } catch (e) {
+                console.error('Erro ao carregar salas', e);
+            }
+        }
+
+        async function refreshSensorLookupOptions(query = '') {
+            try {
+                const roomId = extractLookupId(roomLookupInput.value.trim());
+                const options = await fetchLookupOptions('/integrations/context/sensors', {
+                    query,
+                    room_id: roomId,
+                    limit: 20
+                });
+                populateLookupList(sensorLookupList, options);
+            } catch (e) {
+                console.error('Erro ao carregar sensores', e);
+            }
+        }
+
+        async function refreshPersonLookupOptions(query = '') {
+            try {
+                const options = await fetchLookupOptions('/integrations/context/people', { query, limit: 20 });
+                populateLookupList(personLookupList, options);
+            } catch (e) {
+                console.error('Erro ao carregar pessoas', e);
+            }
+        }
+
+        const debouncedRoomLookup = debounce(() => {
+            refreshRoomLookupOptions(roomLookupInput.value.trim());
+            refreshSensorLookupOptions(sensorLookupInput.value.trim());
+        });
+        const debouncedSensorLookup = debounce(() => {
+            refreshSensorLookupOptions(sensorLookupInput.value.trim());
+        });
+        const debouncedPersonLookup = debounce(() => {
+            refreshPersonLookupOptions(personLookupInput.value.trim());
+        });
+
+        roomLookupInput.addEventListener('input', () => {
+            debouncedRoomLookup();
+        });
+        roomLookupInput.addEventListener('change', () => {
+            refreshSensorLookupOptions(sensorLookupInput.value.trim());
+        });
+        sensorLookupInput.addEventListener('input', () => {
+            debouncedSensorLookup();
+        });
+        personLookupInput.addEventListener('input', () => {
+            debouncedPersonLookup();
+        });
 
         // Load Data
         async function loadData() {
@@ -467,6 +580,12 @@
                 targetProfileSelect.innerHTML = profiles.map(p =>
                     `<option value="${p.id}">${p.name} - ${p.description}</option>`
                 ).join('');
+
+                await Promise.all([
+                    refreshRoomLookupOptions(),
+                    refreshSensorLookupOptions(),
+                    refreshPersonLookupOptions()
+                ]);
 
             } catch (e) {
                 console.error("Erro ao carregar dados", e);
@@ -745,9 +864,12 @@
             config.modelOverride = modelOverrideSelect.value;
             config.personaPrompt = systemPromptOverride.value.trim();
             config.use_rag = document.getElementById('useRagToggle').checked;
-            config.roomId = roomIdInput.value.trim();
-            config.sensorExternalId = sensorExternalIdInput.value.trim();
-            config.pessoaId = pessoaIdInput.value.trim();
+            config.roomDisplay = roomLookupInput.value.trim();
+            config.sensorDisplay = sensorLookupInput.value.trim();
+            config.personDisplay = personLookupInput.value.trim();
+            config.roomId = extractLookupId(config.roomDisplay);
+            config.sensorExternalId = extractLookupId(config.sensorDisplay);
+            config.pessoaId = extractLookupId(config.personDisplay);
             toggleModal(false);
 
             // Visual feedback on config button if active

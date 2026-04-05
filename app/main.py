@@ -94,6 +94,10 @@ app = FastAPI(
             "name": "health",
             "description": "Monitoramento e health check",
         },
+        {
+            "name": "integrations",
+            "description": "Exploração do PostgreSQL remoto e da API Spring Boot",
+        },
     ],
 )
 

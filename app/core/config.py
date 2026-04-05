@@ -99,6 +99,42 @@ class Settings(BaseSettings):
     debug: bool = False
     """Modo debug - ativa logs mais detalhados."""
 
+    # ==========================================
+    # Integrações Externas - PostgreSQL Remoto
+    # ==========================================
+    remote_pg_host: str = "srv1428963.hstgr.cloud"
+    """Host do PostgreSQL remoto."""
+
+    remote_pg_port: int = 5432
+    """Porta do PostgreSQL remoto."""
+
+    remote_pg_user: str = "postgres"
+    """Usuário de leitura/escrita do PostgreSQL remoto."""
+
+    remote_pg_password: str | None = None
+    """Senha do PostgreSQL remoto."""
+
+    remote_pg_database: str = "procel_analytics"
+    """Banco de dados principal com medições e ocupação."""
+
+    remote_pg_sslmode: Literal["disable", "allow", "prefer", "require"] = "prefer"
+    """Modo SSL usado na conexão com o PostgreSQL remoto."""
+
+    remote_pg_connect_timeout: int = 5
+    """Timeout de conexão com o PostgreSQL remoto, em segundos."""
+
+    remote_pg_max_limit: int = 100
+    """Limite máximo de registros retornados por consulta exploratória."""
+
+    # ==========================================
+    # Integrações Externas - Spring Boot
+    # ==========================================
+    remote_spring_base_url: str = "http://srv1428963.hstgr.cloud:8080"
+    """URL base da API Spring Boot usada como backend de medições."""
+
+    remote_spring_timeout_seconds: float = 15.0
+    """Timeout padrão para chamadas à API Spring Boot."""
+
 
 # Instância global de configurações (singleton)
 settings = Settings()

@@ -8,7 +8,7 @@ Define os endpoints principais:
 
 import logging
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 from app.core.config import settings
 from app.models.schemas import (
@@ -21,6 +21,13 @@ from app.models.schemas import (
     ProactiveChatRequest,
     RAGSearchRequest,
     RAGSearchResponse,
+    RemoteDatabaseCatalogResponse,
+    RemoteDatabaseRowsResponse,
+    RemoteDatabaseTableDetailResponse,
+    SpringApiCatalogResponse,
+    SpringEndpointInvokeRequest,
+    SpringEndpointInvokeResponse,
+    IntegrationsCatalogResponse,
 )
 from app.services.llm_provider import (
     get_llm_provider,
@@ -30,6 +37,14 @@ from app.services.llm_provider import (
 )
 from app.services.memory import get_memory_manager
 from app.services.persona_service import PersonaService
+from app.services.integration_catalog import (
+    EndpointInvocationNotSupportedError,
+    EndpointNotFoundError,
+    RemoteDatabaseError,
+    RemoteSpringApiError,
+    get_remote_postgres_catalog_service,
+    get_spring_api_catalog_service,
+)
 from app.rag.retriever import search_with_metadata
 
 logger = logging.getLogger(__name__)
@@ -267,6 +282,210 @@ async def health() -> HealthResponse:
             message=f"Erro ao verificar status: {e}",
         )
 
+
+@router.get(
+    "/integrations/catalog",
+    response_model=IntegrationsCatalogResponse,
+    tags=["integrations"],
+    summary="Visão consolidada das integrações externas",
+    description=(
+        "Lista o catálogo do PostgreSQL remoto e da API Spring Boot, "
+        "além de destacar os recursos mais relevantes para o projeto atual."
+    ),
+)
+async def get_integrations_catalog() -> IntegrationsCatalogResponse:
+    db_service = get_remote_postgres_catalog_service()
+    spring_service = get_spring_api_catalog_service()
+
+    try:
+        db_connection = db_service.health()
+        db_tables = db_service.list_tables()
+    except RemoteDatabaseError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "remote_database_unavailable", "message": str(e)},
+        )
+
+    spring_endpoints = spring_service.list_endpoints()
+
+    recommended_tables = [
+        table for table in db_tables if table["relevance_score"] >= 90
+    ][:6]
+    recommended_endpoints = [
+        endpoint for endpoint in spring_endpoints if endpoint["relevance_score"] >= 90
+    ][:8]
+
+    return IntegrationsCatalogResponse(
+        database={
+            "connection": db_connection,
+            "tables": db_tables,
+        },
+        spring_api={
+            "connection": spring_service.get_connection_info(),
+            "endpoints": spring_endpoints,
+        },
+        recommendations={
+            "database_tables": recommended_tables,
+            "spring_endpoints": recommended_endpoints,
+        },
+    )
+
+
+@router.get(
+    "/integrations/database/tables",
+    response_model=RemoteDatabaseCatalogResponse,
+    tags=["integrations"],
+    summary="Listar tabelas do PostgreSQL remoto",
+    description=(
+        "Retorna as tabelas disponíveis em `procel_analytics`, com categoria, "
+        "estimativa de linhas e relevância para este projeto."
+    ),
+)
+async def list_remote_database_tables() -> RemoteDatabaseCatalogResponse:
+    service = get_remote_postgres_catalog_service()
+
+    try:
+        return RemoteDatabaseCatalogResponse(
+            connection=service.health(),
+            tables=service.list_tables(),
+        )
+    except RemoteDatabaseError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "remote_database_unavailable", "message": str(e)},
+        )
+
+
+@router.get(
+    "/integrations/database/tables/{schema_name}/{table_name}",
+    response_model=RemoteDatabaseTableDetailResponse,
+    tags=["integrations"],
+    summary="Descrever uma tabela do PostgreSQL remoto",
+    description="Expande as colunas, chaves primárias e referências de uma tabela remota.",
+)
+async def describe_remote_database_table(
+    schema_name: str,
+    table_name: str,
+) -> RemoteDatabaseTableDetailResponse:
+    service = get_remote_postgres_catalog_service()
+
+    try:
+        return RemoteDatabaseTableDetailResponse(**service.describe_table(schema_name, table_name))
+    except RemoteDatabaseError as e:
+        is_missing_table = "Tabela não encontrada" in str(e)
+        raise HTTPException(
+            status_code=(
+                status.HTTP_404_NOT_FOUND
+                if is_missing_table
+                else status.HTTP_503_SERVICE_UNAVAILABLE
+            ),
+            detail={
+                "error": (
+                    "remote_table_not_found"
+                    if is_missing_table
+                    else "remote_database_unavailable"
+                ),
+                "message": str(e),
+            },
+        )
+
+
+@router.get(
+    "/integrations/database/tables/{schema_name}/{table_name}/rows",
+    response_model=RemoteDatabaseRowsResponse,
+    tags=["integrations"],
+    summary="Amostrar registros de uma tabela remota",
+    description="Lê um subconjunto paginado de linhas do PostgreSQL remoto.",
+)
+async def preview_remote_database_rows(
+    schema_name: str,
+    table_name: str,
+    limit: int = Query(default=25, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+) -> RemoteDatabaseRowsResponse:
+    service = get_remote_postgres_catalog_service()
+
+    try:
+        return RemoteDatabaseRowsResponse(
+            **service.preview_rows(schema_name, table_name, limit=limit, offset=offset)
+        )
+    except RemoteDatabaseError as e:
+        is_missing_table = "Tabela não encontrada" in str(e)
+        raise HTTPException(
+            status_code=(
+                status.HTTP_404_NOT_FOUND
+                if is_missing_table
+                else status.HTTP_503_SERVICE_UNAVAILABLE
+            ),
+            detail={
+                "error": (
+                    "remote_table_not_found"
+                    if is_missing_table
+                    else "remote_database_unavailable"
+                ),
+                "message": str(e),
+            },
+        )
+
+
+@router.get(
+    "/integrations/spring/endpoints",
+    response_model=SpringApiCatalogResponse,
+    tags=["integrations"],
+    summary="Listar endpoints da API Spring Boot",
+    description=(
+        "Lista os endpoints confirmados no Spring Boot remoto e também os observados "
+        "na coleção/Postman, indicando se a invocação automática já é suportada."
+    ),
+)
+async def list_spring_endpoints() -> SpringApiCatalogResponse:
+    service = get_spring_api_catalog_service()
+    return SpringApiCatalogResponse(
+        connection=service.get_connection_info(),
+        endpoints=service.list_endpoints(),
+    )
+
+
+@router.post(
+    "/integrations/spring/endpoints/{endpoint_id}/invoke",
+    response_model=SpringEndpointInvokeResponse,
+    tags=["integrations"],
+    summary="Invocar um endpoint catalogado da API Spring",
+    description=(
+        "Executa uma chamada controlada contra um endpoint remoto da API Spring Boot "
+        "a partir do catálogo local."
+    ),
+)
+async def invoke_spring_endpoint(
+    endpoint_id: str,
+    request: SpringEndpointInvokeRequest,
+) -> SpringEndpointInvokeResponse:
+    service = get_spring_api_catalog_service()
+
+    try:
+        response = service.invoke_endpoint(
+            endpoint_id=endpoint_id,
+            path_params=request.path_params,
+            query_params=request.query_params,
+            body=request.body,
+        )
+        return SpringEndpointInvokeResponse(**response)
+    except EndpointNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "spring_endpoint_not_found", "message": str(e)},
+        )
+    except EndpointInvocationNotSupportedError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "spring_endpoint_not_invokable", "message": str(e)},
+        )
+    except RemoteSpringApiError as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={"error": "spring_api_error", "message": str(e)},
+        )
+
 @router.post(
     "/rag/search",
     response_model=RAGSearchResponse,
@@ -365,4 +584,3 @@ async def delete_saved_notification(notif_id: str):
             detail="Notificação não encontrada ou erro ao deletar"
         )
     return {"status": "success"}
-

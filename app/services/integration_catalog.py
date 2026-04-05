@@ -568,6 +568,69 @@ class RemotePostgresCatalogService:
             "rows": rows,
         }
 
+    def fetch_room_by_id(self, room_id: str) -> dict[str, Any] | None:
+        query = """
+            select
+                c.id,
+                c.nome,
+                c.tipo,
+                c.area,
+                c.capacidade,
+                c.pavimento,
+                c.predio_id,
+                c.unidade_id,
+                p.nome as predio_nome,
+                p.campus_id,
+                ca.nome as campus_nome,
+                u.nome as unidade_nome
+            from public.compartimento c
+            left join public.predio p on p.id = c.predio_id
+            left join public.campus ca on ca.nome = p.campus_id
+            left join public.unidade u on u.nome = c.unidade_id
+            where c.id = %s
+            limit 1
+        """
+
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(query, (room_id,))
+            return cursor.fetchone()
+
+    def fetch_sensor_by_external_id(self, sensor_external_id: str) -> dict[str, Any] | None:
+        query = """
+            select
+                s.external_id,
+                s.nome,
+                s.tipo_nome,
+                s.compartimento_id,
+                c.nome as compartimento_nome
+            from public.sensor s
+            left join public.compartimento c on c.id = s.compartimento_id
+            where s.external_id = %s
+            limit 1
+        """
+
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(query, (sensor_external_id,))
+            return cursor.fetchone()
+
+    def fetch_person_by_id(self, pessoa_id: str) -> dict[str, Any] | None:
+        query = """
+            select
+                id,
+                nome,
+                email,
+                telefone,
+                matricula,
+                created_at
+            from public.pessoa
+            where id = %s
+            limit 1
+        """
+
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(query, (pessoa_id,))
+            return cursor.fetchone()
+
 
 class SpringApiCatalogService:
     """Lista e invoca endpoints da API Spring Boot remota."""

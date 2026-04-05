@@ -189,12 +189,15 @@ async def chat_proactive(request: ProactiveChatRequest) -> ChatResponse:
     """
     try:
         # Gera mensagem com overrides e RAG
-        message = await PersonaService.generate_proactive_message(
+        result = await PersonaService.generate_proactive_message(
             request.persona_id, 
             target_profile_id=request.target_profile_id,
             persona_override=request.persona_override,
             model_override=request.model_override,
-            use_rag=request.use_rag
+            use_rag=request.use_rag,
+            room_id=request.room_id,
+            sensor_external_id=request.sensor_external_id,
+            pessoa_id=request.pessoa_id,
         )
         
         provider = get_llm_provider()
@@ -204,9 +207,10 @@ async def chat_proactive(request: ProactiveChatRequest) -> ChatResponse:
         
         return ChatResponse(
             session_id="new-session", # Placeholder
-            reply=message,
+            reply=result.message,
             provider=provider.name,
             model=used_model,
+            context_summary=result.context_summary,
         )
 
     except ValueError as e:

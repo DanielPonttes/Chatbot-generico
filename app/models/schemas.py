@@ -70,6 +70,24 @@ class ProactiveChatRequest(BaseModel):
         description="Se o bot deve usar contexto da base de dados RAG (False para desativar)",
     )
 
+    room_id: str | None = Field(
+        default=None,
+        description="ID do compartimento/sala usado para buscar medições e contexto real",
+        examples=["2"],
+    )
+
+    sensor_external_id: str | None = Field(
+        default=None,
+        description="External ID do sensor usado para buscar a última medição real",
+        examples=["SII-001"],
+    )
+
+    pessoa_id: str | None = Field(
+        default=None,
+        description="ID da pessoa para personalizar a notificação com dados reais do backend",
+        examples=["ravilon"],
+    )
+
 
 class RAGSearchRequest(BaseModel):
     """Request para teste direto do RAG /rag/search."""
@@ -134,6 +152,10 @@ class ChatResponse(BaseModel):
     model: str = Field(
         ...,
         description="Nome do modelo usado para gerar a resposta",
+    )
+    context_summary: str | None = Field(
+        default=None,
+        description="Resumo do contexto operacional real usado para gerar a mensagem",
     )
 
 

@@ -4,7 +4,7 @@ Schemas Pydantic para validação de requests e responses.
 Define os modelos de dados usados na API.
 """
 
-from typing import Literal
+from typing import Any, Dict, Literal, Optional
 from pydantic import BaseModel, Field
 
 
@@ -70,6 +70,22 @@ class ProactiveChatRequest(BaseModel):
         description="Se o bot deve usar contexto da base de dados RAG (False para desativar)",
     )
 
+    notification_type_id: str | None = Field(
+        default=None,
+        description="Subtipo de notificação (ex: reengajamento_streak, reengajamento_cofre)",
+        examples=["reengajamento_streak", "reengajamento_cofre", "reengajamento_winback"],
+    )
+    notification_context: Dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Variáveis dinâmicas do template do NotificationType. "
+            "Ex.: {'streak_days': 14, 'hours_remaining': 3}"
+        ),
+        examples=[
+            {"streak_days": 14, "hours_remaining": 3},
+            {"coins_amount": 500, "expiry_deadline": "fim do mês", "redemption_example": "lâmpadas LED"},
+        ],
+    )
 
 class RAGSearchRequest(BaseModel):
     """Request para teste direto do RAG /rag/search."""

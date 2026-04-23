@@ -24,5 +24,43 @@
       "current_position": "47",
       "total_participants": "520"
     }
+  },
+  {
+  "persona_id": "provocador",
+  "target_profile_id": "engajado",
+  "notification_type_id": "reengajamento_streak",
+  "use_rag": false,
+  "notification_context": {
+    "streak_days": 14,
+    "hours_remaining": 4,
+    "user_first_name": "Ana"
+  }
+  },
+  {
+  "persona_id": "motivador",
+  "target_profile_id": "indiferente",
+  "notification_type_id": "reengajamento_cofre",
+  "use_rag": false,
+  "notification_context": {
+    "coins_amount": 500,
+    "expiry_deadline": "domingo à meia-noite",
+    "redemption_example": "desconto em lâmpadas LED",
+    "user_first_name": "Carlos"
+  }
+  },
+{
+  "persona_id": "debochado",
+  "target_profile_id": "engajado",
+  "notification_type_id": "conquista_impacto_ambiental",
+  "use_rag": false,
+  "notification_context": {
+    "period_label": "mês de abril",
+    "kwh_saved": 38,
+    "impact_metric_value": 4,
+    "impact_metric_unit": "árvores plantadas equivalentes",
+    "secondary_metric_value": 19,
+    "secondary_metric_unit": "kg de CO2 evitados",
+    "comparison_previous_period": "30% a mais que março"
+  }
   }
 ]

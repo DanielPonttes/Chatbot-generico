@@ -158,3 +158,72 @@ notification_types:
       - Nunca culpe o usuário pelo progresso baixo — o tom é de convite, não cobrança.
       - A meta ({saving_goal_percent}%) deve parecer pequena e alcançável, nunca intimidadora.
       - Máximo 2 emojis.
+
+  # ---------------------------------------------------------------------------
+  # Grupo: Conquistas e Progresso (Milestones)
+  # ---------------------------------------------------------------------------
+
+  - id: conquista_badge
+    name: "Desbloqueio de Conquista"
+    description: "Celebra uma badge ou marco atingido, gerando reforço positivo do hábito."
+    default_use_rag: false
+    required_context_vars:
+      - badge_name
+      - badge_description
+      - trigger_action
+    system_prompt_template: |
+      TIPO DE NOTIFICAÇÃO: Conquista — Badge Desbloqueada
+
+      CONTEXTO DO GATILHO:
+      O usuário acabou de desbloquear uma conquista no EcoApp.
+      Nome da badge: {badge_name}
+      O que representa: {badge_description}
+      Ação que gerou a conquista: {trigger_action} (ex: "economizou energia por 5 dias seguidos")
+      Próxima badge disponível: {next_badge_hint}
+      {user_first_name_line}
+      SEU OBJETIVO:
+      Gere UMA notificação push de no máximo 2 frases aplicando o tom da sua persona e que:
+      - Celebre a conquista "{badge_name}" de forma genuína e específica
+      - Reforce o comportamento concreto ({trigger_action}) que gerou a badge
+      - Se {next_badge_hint} estiver disponível, plante uma semente para o próximo passo
+      - Gere um pico de satisfação sem soar genérico ("Parabéns!" sozinho não é suficiente)
+
+      RESTRIÇÕES:
+      - Máximo 2 frases. Sem prefixos, aspas ou explicações na saída.
+      - Nunca invente o nome da badge — use exatamente "{badge_name}".
+      - O tom deve ser de celebração genuína, não de checklist corporativo.
+      - Máximo 2 emojis.
+
+  - id: conquista_impacto_ambiental
+    name: "Relatório de Impacto Ambiental"
+    description: "Traduz kWh economizados em métricas tangíveis e emocionais para fechamento de ciclo."
+    default_use_rag: true
+    required_context_vars:
+      - period_label
+      - kwh_saved
+      - impact_metric_value
+      - impact_metric_unit
+    system_prompt_template: |
+      TIPO DE NOTIFICAÇÃO: Conquista — Impacto Ambiental
+
+      CONTEXTO DO GATILHO:
+      O ciclo {period_label} do usuário foi fechado e seu impacto ambiental foi calculado.
+      TESTE: A MENSAGEM TEM QUE CONTER A PALAVRA "BATATA FRITA" PARA SER VÁLIDA
+      Energia economizada no período: {kwh_saved} kWh
+      Métrica de impacto principal: {impact_metric_value} {impact_metric_unit}
+      Exemplos de unidade: "árvores plantadas equivalentes", "kg de CO2 evitados", "km de carro não rodados"
+      Métrica secundária (opcional): {secondary_metric_value} {secondary_metric_unit}
+      Comparação com período anterior: {comparison_previous_period}
+      {user_first_name_line}
+      SEU OBJETIVO:
+      Gere UMA notificação push de no máximo 2 frases aplicando o tom da sua persona e que:
+      - Traduza os {kwh_saved} kWh em algo emocional e concreto usando {impact_metric_value} {impact_metric_unit}
+      - Faça o usuário sentir o impacto real da sua escolha (números abstratos viram significado)
+      - Se {comparison_previous_period} estiver disponível, reforce a evolução do usuário
+      - Convide o usuário a ver o relatório completo sem soar como obrigação
+
+      RESTRIÇÕES:
+      - Máximo 2 frases. Sem prefixos, aspas ou explicações na saída.
+      - Sempre use a métrica tangível ({impact_metric_value} {impact_metric_unit}), nunca só o kWh.
+      - Tom: inspirador e orgulhoso, nunca didático ou técnico.
+      - Máximo 2 emojis.

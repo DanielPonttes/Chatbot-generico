@@ -3,17 +3,26 @@ Serviço de Personas para mensagens proativas.
 """
 
 import logging
-from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Any
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import yaml
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.services.llm_provider import get_llm_provider, LLMProviderError
 from app.rag.retriever import get_relevant_context
 
 logger = logging.getLogger(__name__)
 
+# Caminho do YAML com os tipos de notificação.
+# Resolve relativo a este arquivo para funcionar independente do cwd.
+_NOTIFICATION_TYPES_PATH = Path(__file__).parent.parent / "data" / "notification_types.yaml"
+
 
 # ---------------------------------------------------------------------------
-# Dataclasses de domínio
+# Dataclasses de domínio (Persona e TargetProfile permanecem dataclasses —
+# são simples, estáticos e não precisam de validação em runtime)
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -32,18 +41,155 @@ class TargetProfile:
     context: str
 
 
-@dataclass
-class NotificationType:
-    id: str
-    name: str
-    description: str
-    # Template do system prompt. Use {variavel} para slots dinâmicos.
-    # O preenchimento acontece em generate_proactive_message via notification_context.
-    system_prompt_template: str
-    # Variáveis obrigatórias que DEVEM estar em notification_context ao chamar este tipo.
-    required_context_vars: List[str] = field(default_factory=list)
-    # Sugestão de uso de RAG para este tipo (pode ser sobrescrito na chamada).
-    default_use_rag: bool = False
+# ---------------------------------------------------------------------------
+# NotificationType como Pydantic BaseModel
+# ---------------------------------------------------------------------------
+
+class NotificationType(BaseModel):
+    """
+    Define um subtipo de notificação proativa.
+
+    Carregado a partir de notification_types.yaml e validado pelo Pydantic
+    na inicialização da aplicação — erros de conteúdo no YAML são detectados
+    antes da primeira requisição chegar.
+    """
+
+    id: str = Field(
+        ...,
+        min_length=1,
+        description="Identificador único do tipo (ex: 'reengajamento_streak').",
+    )
+    name: str = Field(
+        ...,
+        min_length=1,
+        description="Nome legível para exibição no frontend.",
+    )
+    description: str = Field(
+        ...,
+        min_length=1,
+        description="Descrição do objetivo e caso de uso do tipo.",
+    )
+    system_prompt_template: str = Field(
+        ...,
+        min_length=10,
+        description=(
+            "Template do system prompt. Use {variavel} para slots dinâmicos. "
+            "Variáveis opcionais não precisam estar em required_context_vars — "
+            "o _SafeDict lida com ausências sem quebrar o formato."
+        ),
+    )
+    required_context_vars: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Variáveis que DEVEM estar presentes em notification_context ao chamar este tipo. "
+            "O serviço valida isso antes de chamar o LLM."
+        ),
+    )
+    default_use_rag: bool = Field(
+        default=False,
+        description=(
+            "Se RAG deve ser ativado por padrão para este tipo. "
+            "O parâmetro use_rag da requisição tem prioridade se fornecido explicitamente."
+        ),
+    )
+
+    # --- Validadores ---
+
+    @field_validator("id")
+    @classmethod
+    def id_sem_espacos(cls, v: str) -> str:
+        if " " in v:
+            raise ValueError(
+                f"O campo 'id' não pode conter espaços. Use underscores: '{v.replace(' ', '_')}'"
+            )
+        return v
+
+    @field_validator("required_context_vars")
+    @classmethod
+    def vars_sem_chaves(cls, v: List[str]) -> List[str]:
+        """Garante que as variáveis foram declaradas sem as chaves do template (sem { })."""
+        for var in v:
+            if "{" in var or "}" in var:
+                raise ValueError(
+                    f"required_context_vars deve listar nomes sem chaves. "
+                    f"Use '{var.strip('{}' )}' em vez de '{var}'."
+                )
+        return v
+
+    @model_validator(mode="after")
+    def vars_presentes_no_template(self) -> "NotificationType":
+        """
+        Verifica que todas as required_context_vars aparecem de fato no template.
+        Evita declarar uma variável como obrigatória mas esquecer de usá-la no prompt.
+        """
+        for var in self.required_context_vars:
+            if f"{{{var}}}" not in self.system_prompt_template:
+                raise ValueError(
+                    f"A variável obrigatória '{var}' está em required_context_vars "
+                    f"mas não aparece no system_prompt_template como '{{{var}}}'."
+                )
+        return self
+
+
+# ---------------------------------------------------------------------------
+# Carregador e validador do YAML
+# ---------------------------------------------------------------------------
+
+def _load_notification_types(path: Path = _NOTIFICATION_TYPES_PATH) -> List[NotificationType]:
+    """
+    Lê notification_types.yaml e valida cada entrada contra NotificationType.
+
+    Lança erros descritivos na inicialização se o YAML estiver malformado,
+    evitando que problemas de conteúdo só apareçam em runtime.
+    """
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Arquivo de tipos de notificação não encontrado: {path}\n"
+            f"Crie o arquivo em app/data/notification_types.yaml."
+        )
+
+    raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+
+    if not isinstance(raw, dict) or "notification_types" not in raw:
+        raise ValueError(
+            "O YAML deve ter uma chave raiz 'notification_types' com uma lista de tipos."
+        )
+
+    entries = raw["notification_types"]
+    if not isinstance(entries, list):
+        raise ValueError("'notification_types' deve ser uma lista.")
+
+    tipos: List[NotificationType] = []
+    erros: List[str] = []
+
+    for i, entry in enumerate(entries):
+        try:
+            tipos.append(NotificationType(**entry))
+        except Exception as e:
+            # Coleta todos os erros antes de lançar, para facilitar correção do YAML
+            entry_id = entry.get("id", f"<entrada #{i + 1}>")
+            erros.append(f"  [{entry_id}] {e}")
+
+    if erros:
+        raise ValueError(
+            f"Erros encontrados em {path.name}:\n" + "\n".join(erros)
+        )
+
+    # Verifica IDs duplicados
+    ids = [t.id for t in tipos]
+    duplicados = {id_ for id_ in ids if ids.count(id_) > 1}
+    if duplicados:
+        raise ValueError(
+            f"IDs duplicados encontrados em {path.name}: {duplicados}"
+        )
+
+    logger.info(f"{len(tipos)} tipos de notificação carregados de '{path.name}'.")
+    return tipos
+
+
+# Carregado uma vez na inicialização do módulo.
+# Se o YAML tiver erro, a aplicação falha no startup com mensagem clara.
+NOTIFICATION_TYPES: List[NotificationType] = _load_notification_types()
 
 
 # ---------------------------------------------------------------------------
@@ -123,118 +269,16 @@ TARGET_PROFILES = [
 
 
 # ---------------------------------------------------------------------------
-# Tipos de notificação — definem o OBJETIVO e as VARIÁVEIS de contexto
+# Utilitário interno
 # ---------------------------------------------------------------------------
 
-NOTIFICATION_TYPES = [
-    # --- Grupo: Reengajamento (Win-back) ---
-
-    NotificationType(
-        id="reengajamento_streak",
-        name="Alerta de Risco de Streak",
-        description="Ativa aversão à perda para usuários prestes a quebrar uma sequência de dias.",
-        default_use_rag=False,
-        required_context_vars=["streak_days", "hours_remaining"],
-        system_prompt_template=(
-            "TIPO DE NOTIFICAÇÃO: Reengajamento — Risco de Streak\n"
-            "\n"
-            "CONTEXTO DO GATILHO:\n"
-            "O usuário está prestes a perder uma sequência contínua (streak) de dias economizando energia.\n"
-            "Dias consecutivos acumulados: {streak_days}\n"
-            "Horas restantes para a streak quebrar: {hours_remaining}\n"
-            "{user_first_name_line}"
-            "\n"
-            "SEU OBJETIVO:\n"
-            "Gere UMA notificação push de no máximo 2 frases aplicando o tom da sua persona e que:\n"
-            "- Ative o gatilho de AVERSÃO À PERDA (o usuário não quer perder o que construiu)\n"
-            "- Mencione os {streak_days} dias de forma concreta\n"
-            "- Proponha UMA micro-ação simples e imediata\n"
-            "- Transmita urgência real sem ser alarmista\n"
-            "\n"
-            "RESTRIÇÕES:\n"
-            "- Máximo 2 frases. Não inclua explicações, prefixos ou aspas na saída.\n"
-            "- Não invente dados além dos fornecidos.\n"
-            "- Não use linguagem punitiva ou de vergonha — o objetivo é motivar.\n"
-            "- Máximo 2 emojis.\n"
-        )
-    ),
-
-    NotificationType(
-        id="reengajamento_cofre",
-        name="Pontos a Expirar",
-        description="Traz usuário inativo lembrando do valor acumulado com urgência de expiração.",
-        default_use_rag=False,
-        required_context_vars=["coins_amount", "expiry_deadline", "redemption_example"],
-        system_prompt_template=(
-            "TIPO DE NOTIFICAÇÃO: Reengajamento — Pontos a Expirar\n"
-            "\n"
-            "CONTEXTO DO GATILHO:\n"
-            "O usuário está inativo e possui EcoCoins acumuladas prestes a expirar.\n"
-            "Moedas prestes a expirar: {coins_amount}\n"
-            "Prazo de expiração: {expiry_deadline}\n"
-            "Exemplo de resgate disponível: {redemption_example}\n"
-            "{user_first_name_line}"
-            "\n"
-            "SEU OBJETIVO:\n"
-            "Gere UMA notificação push de no máximo 2 frases aplicando o tom da sua persona e que:\n"
-            "- Lembre o valor concreto ({coins_amount} moedas) que o usuário já possui\n"
-            "- Crie urgência real pelo prazo ({expiry_deadline})\n"
-            "- Mencione o resgate específico ({redemption_example})\n"
-            "- Deixe claro que a perda é evitável com uma ação simples agora\n"
-            "\n"
-            "RESTRIÇÕES:\n"
-            "- Máximo 2 frases. Não inclua explicações, prefixos ou aspas na saída.\n"
-            "- Não invente benefícios além de {redemption_example}.\n"
-            "- Tom informativo e urgente, nunca ameaçador.\n"
-            "- Máximo 2 emojis.\n"
-        )
-    ),
-
-    NotificationType(
-        id="reengajamento_winback",
-        name="Surpresa de Retorno",
-        description="Reativa usuários frios com novidade do app + recompensa imediata.",
-        default_use_rag=True,   # RAG pode enriquecer a descrição da nova feature
-        required_context_vars=["new_feature_name", "new_feature_description", "welcome_back_reward"],
-        system_prompt_template=(
-            "TIPO DE NOTIFICAÇÃO: Reengajamento — Surpresa de Retorno\n"
-            "\n"
-            "CONTEXTO DO GATILHO:\n"
-            "O usuário está frio — inativo há semanas ou meses.\n"
-            "Dias desde o último acesso: {days_inactive}\n"
-            "Nova funcionalidade lançada: {new_feature_name} — {new_feature_description}\n"
-            "Recompensa de boas-vindas: {welcome_back_reward}\n"
-            "{user_first_name_line}"
-            "\n"
-            "SEU OBJETIVO:\n"
-            "Gere UMA notificação push de no máximo 2 frases aplicando o tom da sua persona e que:\n"
-            "- Abra com gancho de novidade genuína (o app evoluiu desde que saiu)\n"
-            "- Mencione a recompensa {welcome_back_reward} de forma explícita\n"
-            "- Crie curiosidade sem revelar tudo\n"
-            "- Transmita acolhimento, NÃO cobrança pela ausência\n"
-            "\n"
-            "RESTRIÇÕES:\n"
-            "- Máximo 2 frases. Não inclua explicações, prefixos ou aspas na saída.\n"
-            "- Para usuários inativos há mais de 60 dias: tom ainda mais suave, sem urgência.\n"
-            "- Máximo 2 emojis.\n"
-        )
-    ),
-
-    # --- Grupo: Educativo/Engajamento (exemplo de extensibilidade) ---
-    # Descomente e preencha quando for adicionar este grupo:
-    #
-    # NotificationType(
-    #     id="educativo_dica_rapida",
-    #     name="Dica Rápida de Economia",
-    #     description="Entrega uma dica curta de eficiência energética baseada no RAG.",
-    #     default_use_rag=True,
-    #     required_context_vars=[],
-    #     system_prompt_template=(
-    #         "TIPO DE NOTIFICAÇÃO: Educativo — Dica Rápida\n"
-    #         "..."
-    #     )
-    # ),
-]
+class _SafeDict(dict):
+    """
+    dict que retorna '{chave}' para chaves ausentes em str.format_map().
+    Permite variáveis opcionais no template sem causar KeyError.
+    """
+    def __missing__(self, key: str) -> str:
+        return f"{{{key}}}"
 
 
 # ---------------------------------------------------------------------------
@@ -282,7 +326,6 @@ class PersonaService:
         persona_override: Optional[object] = None,
         model_override: Optional[str] = None,
         use_rag: Optional[bool] = None,
-        # Novos parâmetros:
         notification_type_id: Optional[str] = None,
         notification_context: Optional[Dict[str, Any]] = None,
     ) -> str:
@@ -294,12 +337,12 @@ class PersonaService:
             target_profile_id:     Perfil do receptor (opcional).
             persona_override:      Substitui o system_prompt da persona (opcional).
             model_override:        Modelo a usar nesta chamada (opcional).
-            use_rag:               Força ativar/desativar RAG. Se None, usa default do NotificationType
-                                   (ou True se não houver NotificationType).
+            use_rag:               Força ativar/desativar RAG. Se None, usa default_use_rag
+                                   do NotificationType (ou True se não houver tipo definido).
             notification_type_id:  Subtipo de notificação (opcional; sem ele, comportamento legado).
             notification_context:  Dict com as variáveis do template do NotificationType.
-                                   Ex.: {"streak_days": 14, "hours_remaining": 3}
         """
+
         # 1. Resolve Persona
         persona = PersonaService.get_persona_by_id(persona_id)
         if not persona:
@@ -318,7 +361,7 @@ class PersonaService:
             if not notif_type:
                 raise ValueError(f"NotificationType '{notification_type_id}' não encontrado.")
 
-            ctx = notification_context or {}
+            ctx = dict(notification_context or {})
 
             # Valida variáveis obrigatórias
             missing = [v for v in notif_type.required_context_vars if v not in ctx]
@@ -332,17 +375,15 @@ class PersonaService:
             if ctx.get("user_first_name"):
                 ctx["user_first_name_line"] = f"Nome do usuário: {ctx['user_first_name']}\n"
 
-            # Preenche variáveis opcionais com placeholder para não quebrar o .format_map
-            filled_template = notif_type.system_prompt_template.format_map(
-                _SafeDict(ctx)
-            )
+            # Preenche o template — variáveis ausentes ficam como {chave} via _SafeDict
+            filled_template = notif_type.system_prompt_template.format_map(_SafeDict(ctx))
             notif_type_block = f"\n{filled_template}"
 
-            # Decide use_rag: parâmetro explícito tem prioridade, senão usa default do tipo
+            # Decide use_rag: parâmetro explícito tem prioridade
             if effective_use_rag is None:
                 effective_use_rag = notif_type.default_use_rag
         else:
-            # Comportamento legado: sem tipo, RAG ativado por padrão
+            # Comportamento legado: sem tipo definido, RAG ativado por padrão
             if effective_use_rag is None:
                 effective_use_rag = True
 
@@ -391,16 +432,3 @@ class PersonaService:
         except Exception as e:
             logger.error(f"Erro ao gerar mensagem proativa para persona='{persona_id}': {e}")
             raise LLMProviderError(f"Falha na geração de mensagem: {e}")
-
-
-# ---------------------------------------------------------------------------
-# Utilitário interno
-# ---------------------------------------------------------------------------
-
-class _SafeDict(dict):
-    """
-    dict que retorna '{chave}' para chaves ausentes em str.format_map().
-    Evita KeyError quando o template tem variáveis opcionais não fornecidas.
-    """
-    def __missing__(self, key: str) -> str:
-        return f"{{{key}}}"

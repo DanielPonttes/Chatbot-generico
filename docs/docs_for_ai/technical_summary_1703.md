@@ -1,250 +1,203 @@
-﻿---
-name: technical-manifest
-overview: "Analyze `d:\\daniel\\Chatbot-generico\\` and produce a dependency-tree manifest: entry point(s), core logic layer, external dependencies (APIs/DB), and concrete input→output data-travel paths."
-todos:
-  - id: confirm-scope
-    content: Confirm which subproject(s) under d:\daniel to include if there are multiple besides Chatbot-generico; current manifest covers Chatbot-generico only.
-    status: pending
-  - id: expand-manifest
-    content: If needed, expand the manifest to include exact endpoint list + frontend call sites in app/static/*.html, and document any additional external services discovered.
-    status: pending
-isProject: false
----
+# Technical Manifest
 
-# Technical Manifest (Dependency Tree + Data Flow)
+## System
 
-## System identification
+- Runtime: FastAPI served by Uvicorn.
+- Entry point: `app/main.py`.
+- Router: `app/api/routes.py`.
+- Schemas: `app/models/schemas.py`.
+- Services: `app/services/`.
+- Static UI: `app/static/`.
 
-- **Project root**: `[d:\daniel\Chatbot-generico\](d:\daniel\Chatbot-generico\)`
-- **Runtime type**: **FastAPI** HTTP API served by **Uvicorn**
+## Startup and Shutdown
 
-## Entry Point (composition root)
+`app/main.py` creates the FastAPI app, registers CORS, serves static pages and includes the API router.
 
-- **ASGI app**: `[app/main.py](d:\daniel\Chatbot-generico\app\main.py)`
-  - **Creates** `app = FastAPI(...)` and wires router + static pages.
-  - **Startup** initializes saved-notifications DB via `init_db()`.
-  - **Shutdown** closes LLM provider + memory manager.
+Lifespan:
 
-Key wiring excerpt:
+1. Logs configured provider, model and memory mode.
+2. Initializes saved-notifications SQLite via `app.api.db.init_db()`.
+3. On shutdown, closes the LLM provider and memory manager.
 
-```41:117:d:\daniel\Chatbot-generico\app\main.py
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # ...
-    from app.api.db import init_db
-    init_db()
+Static routes:
 
-    yield
+- `/` -> `index.html`
+- `/notifications` -> `notifications.html`
+- `/rag` -> `rag.html`
 
-    await close_provider()
-    close_memory_manager()
-
-app = FastAPI(
-    # ...
-    lifespan=lifespan,
-)
-
-app.include_router(router, tags=["chat"])
-```
-
-## Core Logic Layer (application logic)
-
-In this codebase, “use cases” are mostly embedded in the HTTP layer (`routes.py`) and a single application service (`PersonaService`). There is no separate `usecases/` module.
-
-- **HTTP orchestration (acts like application layer)**: `[app/api/routes.py](d:\daniel\Chatbot-generico\app\api\routes.py)`
-  - `/chat`: fetch session history → call LLM → persist history → return response.
-  - `/chat/proactive`: call `PersonaService.generate_proactive_message` → return response.
-  - `/rag/search`: query vector store → return chunks.
-  - `/notifications/saved`*: CRUD over local SQLite table.
-- **Persona / proactive message logic**: `[app/services/persona_service.py](d:\daniel\Chatbot-generico\app\services\persona_service.py)`
-  - Persona + target profile selection.
-  - Prompt composition.
-  - Optional RAG context retrieval.
-  - Calls LLM provider.
-- **Conversation memory abstraction**: `[app/services/memory.py](d:\daniel\Chatbot-generico\app\services\memory.py)`
-  - `MemoryManager` interface.
-  - Implementations: in-memory vs SQLite conversation DB.
-- **LLM provider abstraction (adapter behind interface)**: `[app/services/llm_provider.py](d:\daniel\Chatbot-generico\app\services\llm_provider.py)`
-  - `LLMProvider` interface.
-  - Implementations: Ollama (local HTTP), HuggingFace (cloud HTTP), Google Gemini (SDK).
-
-## External Dependencies (APIs / Databases / SDKs)
-
-### External network APIs
-
-- **Ollama HTTP API (local)**
-  - **Where**: `OllamaProvider.generate()` POSTs to `.../api/chat` and checks `.../api/tags`.
-  - **Code**: `[app/services/llm_provider.py](d:\daniel\Chatbot-generico\app\services\llm_provider.py)`
-- **HuggingFace Inference API (cloud)**
-  - **Where**: `HuggingFaceProvider.generate()` POSTs to `https://api-inference.huggingface.co/models/{model}`.
-  - **Code**: `[app/services/llm_provider.py](d:\daniel\Chatbot-generico\app\services\llm_provider.py)`
-- **Google Gemini API (cloud, via SDK)**
-  - **Where**: `GoogleGeminiProvider.generate()` uses `genai.Client(...).models.generate_content(...)`.
-  - **Code**: `[app/services/llm_provider.py](d:\daniel\Chatbot-generico\app\services\llm_provider.py)`
-- **Google embeddings API (cloud, via LangChain)**
-  - **Where**: `GoogleGenerativeAIEmbeddings(..., google_api_key=...)` used to embed documents/queries.
-  - **Code**: `[app/rag/vector_db.py](d:\daniel\Chatbot-generico\app\rag\vector_db.py)`
-
-### Local persistence (databases/files)
-
-- **SQLite: saved notifications DB**
-  - **File path**: `data/db/saved_notifications.db` (overridable via `SQLITE_DB_PATH`).
-  - **Code**: `[app/api/db.py](d:\daniel\Chatbot-generico\app\api\db.py)`
-- **SQLite: conversation history DB (optional)**
-  - **File path**: `./data/conversations.db` (overridable via `SQLITE_PATH`; enabled via `USE_SQLITE=true`).
-  - **Code**: `[app/services/memory.py](d:\daniel\Chatbot-generico\app\services\memory.py)`
-- **Chroma vector store (local on disk)**
-  - **Directory**: `data/chroma_db/`.
-  - **Code**: `[app/rag/vector_db.py](d:\daniel\Chatbot-generico\app\rag\vector_db.py)`
-
-### Config / secrets
-
-- **Settings loader**: `[app/core/config.py](d:\daniel\Chatbot-generico\app\core\config.py)`
-  - Loads from `.env` and environment variables.
-
-## Technical manifest: Dependency Tree (input → output)
+## Core Dependency Tree
 
 ```text
-FastAPI_App (app/main.py)
-├─ Lifespan
-│  ├─ init_db() -> SQLite(saved_notifications)
-│  └─ shutdown: close_provider(), close_memory_manager()
-├─ Router (app/api/routes.py)
-│  ├─ POST /chat
-│  │  ├─ Input DTO: ChatRequest (app/models/schemas.py)
-│  │  ├─ Memory: get_memory_manager() -> MemoryManager
-│  │  │  ├─ InMemoryManager (RAM)
-│  │  │  └─ SQLiteMemoryManager -> SQLite(conversations.db)
-│  │  ├─ Provider: get_llm_provider() -> LLMProvider
-│  │  │  ├─ OllamaProvider -> HTTP(Ollama /api/chat)
-│  │  │  ├─ HuggingFaceProvider -> HTTP(HF Inference API)
-│  │  │  └─ GoogleGeminiProvider -> SDK(Gemini generate_content)
-│  │  ├─ Side effects
-│  │  │  ├─ memory.add_message(user)
-│  │  │  └─ memory.add_message(assistant)
-│  │  └─ Output DTO: ChatResponse
-│  │
-│  ├─ POST /chat/proactive
-│  │  ├─ Input DTO: ProactiveChatRequest
+FastAPI app
+├─ app.api.routes
+│  ├─ /chat
+│  │  ├─ get_memory_manager()
+│  │  ├─ get_llm_provider()
+│  │  └─ ChatResponse
+│  ├─ /chat/proactive
 │  │  ├─ PersonaService.generate_proactive_message()
-│  │  │  ├─ Persona/TargetProfile selection
-│  │  │  ├─ Optional RAG
-│  │  │  │  └─ get_relevant_context() -> Chroma(similarity_search)
-│  │  │  │     └─ Embeddings: GoogleGenerativeAIEmbeddings (API key)
-│  │  │  └─ provider.generate(prompt)
-│  │  └─ Output DTO: ChatResponse
-│  │
-│  ├─ POST /rag/search
-│  │  ├─ Input DTO: RAGSearchRequest
-│  │  ├─ search_with_metadata()
-│  │  │  └─ Chroma.similarity_search_with_score()
-│  │  └─ Output DTO: RAGSearchResponse(results[])
-│  │
-│  └─ /notifications/saved*
-│     ├─ get_all_saved_notifications()
-│     ├─ save_notification(...)
-│     ├─ delete_notification(id)
-│     └─ clear_all_notifications()
-│        └─ SQLite(saved_notifications.db)
-└─ Static UI (app/static/*.html)
-   └─ Browser fetch() -> calls the endpoints above
+│  │  ├─ save_notification()
+│  │  └─ ChatResponse
+│  ├─ /rag/search
+│  │  └─ search_with_metadata()
+│  ├─ /notifications/saved*
+│  │  └─ app.api.db SQLite helpers
+│  └─ /integrations/*
+│     └─ integration_catalog services
+├─ app.services.llm_provider
+│  ├─ GoogleGeminiProvider
+│  ├─ OllamaProvider
+│  └─ HuggingFaceProvider
+├─ app.services.persona_service
+│  ├─ static personas
+│  ├─ static target profiles
+│  ├─ notification_type.yaml
+│  ├─ proactive_context
+│  ├─ optional RAG
+│  └─ selected LLM provider
+├─ app.rag
+│  ├─ Chroma vector store
+│  └─ Google embeddings
+└─ app.static
+   └─ browser fetch() calls API endpoints
 ```
 
-## Data travel: concrete paths
+## Main Data Paths
 
-### 1) `/chat` (interactive chat)
+### `POST /chat`
 
-- **Input**: HTTP `POST /chat` JSON (`ChatRequest.session_id`, `.message`, optional `.model_override`).
-- **Data path**:
+Input:
 
-```54:90:d:\daniel\Chatbot-generico\app\api\routes.py
-async def chat(request: ChatRequest) -> ChatResponse:
-    provider = get_llm_provider()
-    memory = get_memory_manager()
-    history = memory.get_formatted_history(request.session_id)
-    reply = await provider.generate(request.message, history, model_override=request.model_override)
-    memory.add_message(request.session_id, "user", request.message)
-    memory.add_message(request.session_id, "assistant", reply)
-    used_model = request.model_override if request.model_override else provider.model
-    return ChatResponse(
-        session_id=request.session_id,
-        reply=reply,
-        provider=provider.name,
-        model=used_model,
-    )
-```
+- `session_id`
+- `message`
+- optional `model_override`
 
-- **External hops** (depending on provider):
-  - **Ollama** POST `.../api/chat` (local) (`app/services/llm_provider.py` L146-L166)
-  - **HuggingFace** POST `https://api-inference.huggingface.co/models/...` (`app/services/llm_provider.py` L370-L410)
-  - **Gemini** SDK `generate_content` (`app/services/llm_provider.py` L280-L286)
-- **Output**: HTTP 200 JSON `ChatResponse`.
+Flow:
 
-### 2) `/chat/proactive` (persona message generation)
+1. `routes.chat()` loads memory via `get_memory_manager()`.
+2. It retrieves formatted history for the session.
+3. It calls `provider.generate(message, history, model_override=...)`.
+4. It stores user and assistant messages.
+5. It returns `ChatResponse`.
 
-- **Input**: HTTP `POST /chat/proactive` JSON (`persona_id`, optional overrides, optional `use_rag`).
-- **Data path**:
-  - Controller delegates to persona service:
+External dependency:
 
-```169:195:d:\daniel\Chatbot-generico\app\api\routes.py
-async def chat_proactive(request: ProactiveChatRequest) -> ChatResponse:
-    message = await PersonaService.generate_proactive_message(
-        request.persona_id,
-        target_profile_id=request.target_profile_id,
-        persona_override=request.persona_override,
-        model_override=request.model_override,
-        use_rag=request.use_rag,
-    )
-    provider = get_llm_provider()
-    used_model = request.model_override if request.model_override else provider.model
-    return ChatResponse(session_id="new-session", reply=message, provider=provider.name, model=used_model)
-```
+- Gemini, Ollama or HuggingFace, depending on `LLM_PROVIDER`.
 
-- Service composes prompt, optionally enriches with RAG, then calls provider:
+### `POST /chat/proactive`
 
-```111:176:d:\daniel\Chatbot-generico\app\services\persona_service.py
-async def generate_proactive_message(..., use_rag: bool = True) -> str:
-    persona = PersonaService.get_persona_by_id(persona_id)
-    # ... build target_context ...
-    provider = get_llm_provider()
-    # ... apply persona_override ...
-    rag_context = ""
-    if use_rag:
-        retrieved_docs = get_relevant_context(rag_query, k=3)
-        # ... embed into prompt ...
-    prompt = (f"Atue com a seguinte persona:\n{system_prompt}\n{target_context}\n{rag_context}\n" ...)
-    message = await provider.generate(prompt, model_override=model_override)
-    return message
-```
+Input:
 
-- **Output**: HTTP 200 JSON `ChatResponse`.
+- `persona_id`
+- optional `target_profile_id`
+- optional `persona_override`
+- optional `model_override`
+- optional `use_rag`
+- optional `room_id`
+- optional `sensor_external_id`
+- optional `pessoa_id`
+- optional `notification_type_id`
+- optional `notification_context`
 
-### 3) `/rag/search` (RAG dashboard)
+Flow:
 
-- **Input**: HTTP `POST /rag/search` JSON (`query`, `k`).
-- **Data path**:
+1. `routes.chat_proactive()` calls `PersonaService.generate_proactive_message()`.
+2. `PersonaService` resolves the persona.
+3. It resolves target profile when provided.
+4. It loads `notification_type.yaml` templates and validates required context variables.
+5. It formats the notification-type template with `notification_context`.
+6. It asks `proactive_context.py` for real operational context.
+7. It retrieves RAG context when enabled.
+8. It calls the selected LLM provider.
+9. It returns `ProactiveMessageResult`.
+10. The route saves the notification as `Pendente` through `save_notification()`.
+11. It returns `ChatResponse` with `session_id` equal to the saved notification ID.
 
-```270:289:d:\daniel\Chatbot-generico\app\api\routes.py
-async def semantic_search(request: RAGSearchRequest) -> RAGSearchResponse:
-    results = search_with_metadata(request.query, k=request.k)
-    return RAGSearchResponse(results=results, query_echo=request.query)
-```
+Side effects:
 
-- **Vector store retrieval** (local Chroma on disk):
+- writes to `saved_notifications` SQLite table.
 
-```22:49:d:\daniel\Chatbot-generico\app\rag\retriever.py
-def search_with_metadata(query: str, k: int = 4) -> List[Dict[str, Any]]:
-    vector_store = get_vector_store()
-    results = vector_store.similarity_search_with_score(query, k=k)
-    # ... format metadata ...
-    return formatted_results
-```
+### `POST /rag/search`
 
-### 4) `/notifications/saved*` (saved notifications)
+Input:
 
-- **Input**: HTTP requests from frontend.
-- **Data path**: routes call into SQLite helpers in `[app/api/db.py](d:\daniel\Chatbot-generico\app\api\db.py)` using `sqlite3.connect(DB_PATH)`.
+- `query`
+- `k`
 
-## Notes / risks that affect dependency mapping
+Flow:
 
-- **Gemini SDK package mismatch risk**: code imports `from google import genai` (newer Gemini SDK) but many projects pin `google-generativeai`; if you see runtime import errors, this is why.
+1. `routes.semantic_search()` calls `search_with_metadata()`.
+2. `retriever.py` opens the Chroma vector store.
+3. Chroma runs similarity search with Google embeddings.
+4. Results are formatted as `RAGSearchResult`.
+
+External dependency:
+
+- Google embeddings API through LangChain when embedding/querying.
+
+### `/integrations/*`
+
+Flow:
+
+1. Routes call `get_remote_postgres_catalog_service()` or `get_spring_api_catalog_service()`.
+2. PostgreSQL routes introspect tables and optionally preview rows.
+3. Spring routes list known endpoints and optionally invoke supported endpoints.
+4. Context routes return autocomplete options for rooms, sensors and people.
+
+External dependencies:
+
+- PostgreSQL remote configured by `REMOTE_PG_*`.
+- Spring Boot remote configured by `REMOTE_SPRING_BASE_URL`.
+
+### `/notifications/saved*`
+
+Flow:
+
+1. Routes call `app.api.db` helpers.
+2. Helpers use `sqlite3` with `DB_PATH`.
+3. `DB_PATH` defaults to `data/db/saved_notifications.db`, overridable with `SQLITE_DB_PATH`.
+
+Supported statuses:
+
+- `Pendente`
+- `Aprovada`
+- `Reprovada`
+
+## External Dependencies
+
+### Network
+
+- Gemini SDK: chat provider.
+- Ollama local HTTP API.
+- HuggingFace inference API.
+- Google embeddings through LangChain.
+- PostgreSQL remote.
+- Spring Boot remote.
+
+### Local Files
+
+- `.env`: configuration.
+- `data/db/saved_notifications.db`: saved notifications.
+- `data/conversations.db`: optional conversation memory.
+- `data/chroma_db/`: Chroma vector store.
+- `app/services/notification_type.yaml`: notification templates.
+
+## Test Coverage
+
+Pytest:
+
+- `tests/test_api.py`
+- `tests/test_integrations_api.py`
+- `tests/test_proactive_context.py`
+
+Playwright:
+
+- `tests/e2e/notifications.spec.js`
+- `tests/e2e/helpers/notifications-mocks.js`
+
+## Current Integration Notes
+
+- Branches merged into local `main`: `feat-endpoint-consume`, `FEAT-Notifications`, `feat-reengagingNotification`.
+- `criando-docker`, `feat-profiles-hax` and `feat-persona` were already represented in `main`.
+- `PyYAML` is required because notification types are loaded from YAML.
+- The README and docs describe the current merged behavior after conflict resolution.

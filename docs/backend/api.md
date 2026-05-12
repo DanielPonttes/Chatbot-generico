@@ -1,181 +1,325 @@
-# Documentação da API Backend
+# Documentacao da API Backend
 
-Esta seção detalha os endpoints, modelos de dados e estrutura do backend da aplicação Chatbot Genérico.
+Backend em FastAPI. A composicao da aplicacao fica em `app/main.py`, as rotas em `app/api/routes.py`, os schemas em `app/models/schemas.py` e a logica de dominio em `app/services/`.
 
-## Estrutura Geral
-O backend é construído em **Python** utilizando **FastAPI**.
+## Convencoes
 
-- **Entrada Principal**: `app/main.py`
-- **Rotas**: `app/api/routes.py`
-- **Modelos Pydantic**: `app/models/schemas.py`
-- **Serviços**: `app/services/`
+- Respostas de erro usam `HTTPException` com `detail` estruturado quando possivel.
+- `provider` em respostas de chat pode ser `google`, `ollama` ou `huggingface`.
+- `model_override` troca o modelo apenas naquela requisicao.
+- `POST /chat/proactive` salva automaticamente a notificacao gerada como `Pendente`.
 
-## Endpoints
+## Health
 
-### 1. Health Check
-Verifica a saúde do serviço e o status do provedor LLM.
+### `GET /health`
 
-- **Método**: `GET`
-- **Rota**: `/health`
-- **Resposta**:
-    ```json
+Verifica a aplicacao e o provider LLM configurado.
+
+Resposta:
+
+```json
+{
+  "status": "healthy",
+  "provider": "google",
+  "model": "gemini-3-flash-preview",
+  "provider_available": true,
+  "message": null
+}
+```
+
+`status` pode ser `healthy`, `degraded` ou `unhealthy`.
+
+## Chat
+
+### `POST /chat`
+
+Entrada:
+
+```json
+{
+  "session_id": "usuario-123",
+  "message": "Ola, tudo bem?",
+  "model_override": "gemini-3-pro-preview"
+}
+```
+
+Campos:
+
+- `session_id`: obrigatorio, 1 a 100 caracteres.
+- `message`: obrigatorio, 1 a 4000 caracteres.
+- `model_override`: opcional.
+
+Resposta:
+
+```json
+{
+  "session_id": "usuario-123",
+  "reply": "Resposta do assistente",
+  "provider": "google",
+  "model": "gemini-3-pro-preview",
+  "context_summary": null
+}
+```
+
+## Personas e Perfis
+
+### `GET /personas`
+
+Lista tons disponiveis:
+
+- `provocador`
+- `motivador`
+- `debochado`
+
+### `GET /target-profiles`
+
+Lista perfis-alvo:
+
+- `gastao`
+- `indiferente`
+- `engajado`
+
+## Chat Proativo e Notificacoes
+
+### `POST /chat/proactive`
+
+Gera uma notificacao curta, persiste no SQLite como `Pendente` e retorna o ID gerado em `session_id`.
+
+Entrada completa:
+
+```json
+{
+  "persona_id": "motivador",
+  "target_profile_id": "engajado",
+  "persona_override": {
+    "description": "opcional",
+    "system_prompt": "opcional"
+  },
+  "model_override": "gemini-3-flash-preview",
+  "use_rag": true,
+  "room_id": "2",
+  "sensor_external_id": "SII-001",
+  "pessoa_id": "ravilon",
+  "notification_type_id": "reengajamento_streak",
+  "notification_context": {
+    "streak_days": 14,
+    "hours_remaining": 3,
+    "user_first_name": "Daniel"
+  }
+}
+```
+
+Campos importantes:
+
+- `persona_id`: obrigatorio.
+- `target_profile_id`: opcional.
+- `use_rag`: opcional. Se `null`, segue o `default_use_rag` do tipo YAML; sem tipo, o padrao legado e `true`.
+- `notification_type_id`: opcional. Deve existir em `app/services/notification_type.yaml`.
+- `notification_context`: opcional. Deve conter as variaveis obrigatorias do tipo escolhido.
+- `room_id`, `sensor_external_id`, `pessoa_id`: opcionais para contexto operacional.
+
+Resposta:
+
+```json
+{
+  "session_id": "f9c7c0c8-2f5f-4a3b-8f5f-6c0a6d4f3a11",
+  "reply": "Mensagem push gerada",
+  "provider": "google",
+  "model": "gemini-3-flash-preview",
+  "context_summary": "Sala Elevador (id=2) | Sensor SII-001"
+}
+```
+
+Falhas comuns:
+
+- persona inexistente: `404`.
+- tipo de notificacao inexistente: `404`.
+- variaveis obrigatorias ausentes no tipo: `404` com mensagem do `ValueError`.
+- provider LLM indisponivel: `500` ou `503`, dependendo da origem.
+
+### `GET /notifications/saved`
+
+Lista notificacoes salvas:
+
+```json
+[
+  {
+    "id": "uuid",
+    "type": "Pendente",
+    "content": "texto",
+    "persona": "motivador",
+    "model": "gemini-3-flash-preview",
+    "date": "2026-05-12T02:00:00+00:00",
+    "target_profile": "engajado",
+    "prompt_used": "prompt completo"
+  }
+]
+```
+
+### `POST /notifications/saved`
+
+Salva manualmente uma notificacao:
+
+```json
+{
+  "type": "Aprovada",
+  "content": "Texto da notificacao",
+  "persona": "motivador",
+  "model": "gemini-3-flash-preview",
+  "target_profile": "engajado",
+  "prompt_used": "opcional"
+}
+```
+
+`id` e `date` podem ser enviados, mas se ausentes sao gerados no servidor.
+
+### `PATCH /notifications/saved/{notif_id}`
+
+Atualiza avaliacao:
+
+```json
+{
+  "type": "Aprovada"
+}
+```
+
+Valores aceitos:
+
+- `Pendente`
+- `Aprovada`
+- `Reprovada`
+
+### `DELETE /notifications/saved/{notif_id}`
+
+Remove uma notificacao.
+
+### `DELETE /notifications/saved/all`
+
+Remove todas as notificacoes.
+
+## RAG
+
+### `POST /rag/search`
+
+Busca na base vetorial local.
+
+Entrada:
+
+```json
+{
+  "query": "economia de energia em horarios de pico",
+  "k": 4
+}
+```
+
+Resposta:
+
+```json
+{
+  "results": [
     {
-      "status": "healthy",
-      "provider": "google",
-      "model": "gemini-3-flash-preview",
-      "provider_available": true
+      "content": "chunk encontrado",
+      "source": "arquivo.pdf",
+      "page": 1,
+      "score": 0.42
     }
-    ```
+  ],
+  "query_echo": "economia de energia em horarios de pico"
+}
+```
 
-### 2. Chat Interativo
-Envia mensagens para o bot e recebe respostas. Suporta histórico de sessão e override de modelo.
+## Integracoes Externas
 
-- **Método**: `POST`
-- **Rota**: `/chat`
-- **Corpo da Requisição (`ChatRequest`)**:
-    ```json
-    {
-      "session_id": "string",
-      "message": "string",
-      "model_override": "gemini-3-flash-preview" // Opcional
-    }
-    ```
-- **Resposta (`ChatResponse`)**:
-    ```json
-    {
-      "session_id": "string",
-      "reply": "string",
-      "provider": "string",
-      "model": "string"
-    }
-    ```
+As rotas abaixo usam `app/services/integration_catalog.py`.
 
-### 3. Chat Proativo (Notificação)
-Gera uma mensagem inicial baseada em uma persona e perfil de usuário alvo.
+### `GET /integrations/catalog`
 
-- **Método**: `POST`
-- **Rota**: `/chat/proactive`
-- **Corpo da Requisição (`ProactiveChatRequest`)**:
-    ```json
-    {
-      "persona_id": "provocador",
-      "target_profile_id": "gastao", // Opcional
-      "model_override": "gemini-3-pro-preview", // Opcional
-      "use_rag": true, // Opcional
-      "room_id": "2", // Opcional
-      "sensor_external_id": "SII-001", // Opcional
-      "pessoa_id": "ravilon", // Opcional
-      "persona_override": { // Opcional
-        "system_prompt": "string"
-      }
-    }
-    ```
-- **Resposta (`ChatResponse`)**:
-    ```json
-    {
-      "session_id": "new-session",
-      "reply": "string",
-      "provider": "google",
-      "model": "gemini-3-flash-preview",
-      "context_summary": "string | null"
-    }
-    ```
+Retorna uma visao consolidada:
 
-### 4. Listar Personas
-Retorna as personas disponíveis para o bot.
+- conexao do PostgreSQL remoto;
+- tabelas remotas catalogadas;
+- conexao da API Spring;
+- endpoints Spring catalogados;
+- recomendacoes mais relevantes para o projeto.
 
-- **Método**: `GET`
-- **Rota**: `/personas`
-- **Resposta**: Lista de objetos `PersonaResponse`.
+### `GET /integrations/database/tables`
 
-### 5. Listar Perfis de Usuário
-Retorna os perfis de usuários alvo disponíveis.
+Lista tabelas do PostgreSQL remoto com categoria, estimativa de linhas, relevancia e endpoint de preview.
 
-- **Método**: `GET`
-- **Rota**: `/target-profiles`
-- **Resposta**: Lista de objetos `TargetProfileResponse`.
+### `GET /integrations/database/tables/{schema_name}/{table_name}`
 
-### 6. Catálogo de Integrações Externas
-Consolida os recursos do PostgreSQL remoto (`procel_analytics`) e da API Spring Boot hospedada em `srv1428963.hstgr.cloud:8080`.
+Detalha uma tabela remota, incluindo colunas, chaves primarias e referencias.
 
-- **Método**: `GET`
-- **Rota**: `/integrations/catalog`
-- **Resposta**:
-    - Metadados de conexão do PostgreSQL remoto
-    - Lista priorizada de tabelas relevantes (`medicao`, `sensor`, `compartimento`, `presenca`, `pessoa`, `parametro_*`)
-    - Catálogo dos endpoints Spring observados/confirmados
-    - Recomendações dos recursos mais relevantes para o projeto
+### `GET /integrations/database/tables/{schema_name}/{table_name}/rows`
 
-### 7. Explorar Tabelas do PostgreSQL Remoto
+Parametros:
 
-- **Método**: `GET`
-- **Rota**: `/integrations/database/tables`
-- **Rota de detalhe**: `/integrations/database/tables/{schema}/{table}`
-- **Rota de amostra**: `/integrations/database/tables/{schema}/{table}/rows?limit=25&offset=0`
+- `limit`: 1 a 100, padrao 25.
+- `offset`: padrao 0.
 
-Essas rotas permitem listar tabelas, inspecionar colunas/chaves e amostrar registros diretamente do banco remoto sem escrever SQL no frontend.
+Retorna amostra paginada de linhas.
 
-### 8. Catálogo da API Spring Boot
+### `GET /integrations/spring/endpoints`
 
-- **Método**: `GET`
-- **Rota**: `/integrations/spring/endpoints`
-- **Invocação proxy**: `POST /integrations/spring/endpoints/{endpoint_id}/invoke`
+Lista endpoints Spring Boot catalogados.
 
-Endpoints confirmados como úteis no ambiente atual:
+### `POST /integrations/spring/endpoints/{endpoint_id}/invoke`
 
-- `POST /api/rooms/sync`
-- `POST /api/pessoas`
-- `GET /api/pessoas/{pessoa_id}`
-- `PUT /api/pessoas/{pessoa_id}`
-- `POST /api/presencas/checkin`
-- `POST /api/presencas/checkout`
-- `POST /api/sensors/ingest/mock`
-- `GET /api/sensors/{sensor_external_id}/medicoes`
-- `GET /api/sensors/{sensor_external_id}/medicoes/latest`
-- `GET /api/rooms/{room_id}/medicoes`
-- `GET /api/rooms/{room_id}/medicoes/latest`
+Entrada:
 
-### 9. Autocomplete de Contexto Operacional
+```json
+{
+  "path_params": {
+    "room_id": "2"
+  },
+  "query_params": {
+    "limit": 10
+  },
+  "body": null
+}
+```
 
-Rotas usadas pelo frontend para preencher automaticamente sala, sensor e pessoa:
+Retorna status HTTP, URL final, content type e dados retornados pelo endpoint remoto.
+
+### Autocomplete de Contexto
+
+Usados pela tela `/notifications`:
 
 - `GET /integrations/context/rooms?query=&limit=20`
 - `GET /integrations/context/sensors?query=&room_id=&limit=20`
 - `GET /integrations/context/people?query=&limit=20`
 
-### 10. Notificações Salvas
+Resposta:
 
-Endpoints usados pela tela `/notifications` para persistir feedback:
+```json
+[
+  {
+    "id": "2",
+    "label": "Sala Elevador",
+    "description": "Predio A",
+    "metadata": {}
+  }
+]
+```
 
-- `GET /notifications/saved`
-- `POST /notifications/saved`
-- `DELETE /notifications/saved/{notif_id}`
-- `DELETE /notifications/saved/all`
+## Schemas Centrais
 
-## Modelos de Dados (Schemas)
+- `ChatRequest`
+- `ChatResponse`
+- `ProactiveChatRequest`
+- `PersonaOverride`
+- `RAGSearchRequest`
+- `RAGSearchResponse`
+- `SavedNotificationCreate`
+- `SavedNotificationResponse`
+- `NotificationTypeUpdate`
+- `IntegrationsCatalogResponse`
+- `RemoteDatabaseCatalogResponse`
+- `SpringApiCatalogResponse`
+- `ContextLookupOptionResponse`
 
-### ChatRequest
-- `session_id` (str): Identificador único da sessão.
-- `message` (str): Mensagem do usuário.
-- `model_override` (str, opcional): Nome do modelo a ser usado especificamente nesta requisição.
+## Persistencia
 
-### ProactiveChatRequest
-- `persona_id` (str): ID da persona do bot (Ex: "provocador").
-- `target_profile_id` (str, opcional): ID do perfil do usuário alvo (Ex: "gastao").
-- `model_override` (str, opcional): Nome do modelo LLM.
-- `use_rag` (bool, opcional): Ativa ou desativa a busca na base de conhecimento.
-- `persona_override` (PersonaOverride, opcional): Permite definir um System Prompt customizado temporário.
-- `room_id` (str, opcional): ID do compartimento/sala para buscar o contexto real.
-- `sensor_external_id` (str, opcional): External ID do sensor para buscar a última medição.
-- `pessoa_id` (str, opcional): ID da pessoa para enriquecer a notificação com dados reais do backend.
-
-### PersonaOverride
-- `description` (str, opcional)
-- `system_prompt` (str, opcional)
-
-### ChatResponse
-- `session_id` (str)
-- `reply` (str)
-- `provider` (str)
-- `model` (str)
-- `context_summary` (str, opcional): resumo textual do contexto operacional aplicado
+- Notificacoes: `app/api/db.py`, tabela `saved_notifications`.
+- Historico opcional: `app/services/memory.py`, habilitado com `USE_SQLITE=true`.
+- Vetores RAG: `data/chroma_db/`.

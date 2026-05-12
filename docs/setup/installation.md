@@ -1,123 +1,195 @@
-# Guia de Instalação e Execução
+# Guia de Instalacao e Execucao
 
-Este guia descreve como configurar o ambiente e executar o Chatbot Genérico.
+Este guia configura o Chatbot Generico localmente com API, frontend estatico, RAG, notificacoes, testes e integracoes remotas.
 
-## Pré-requisitos
-- Python 3.11+
-- `pip` e `venv`
-- Node.js 18+
-- `npm`
-- Chave de API do Google Gemini, ou ambiente com Ollama, ou token HuggingFace
+## Pre-requisitos
 
-## Instalação
+- Python 3.11+.
+- `pip` e `venv`.
+- Node.js 18+ e `npm`.
+- Uma opcao de LLM:
+  - Google Gemini com `GEMINI_API_KEY`;
+  - Ollama local;
+  - HuggingFace com `HF_TOKEN`.
+- Para Playwright em Linux/WSL, talvez seja necessario instalar dependencias do Chromium com `--with-deps`.
 
-1. **Clone o repositório** (se aplicável)
-2. **Crie e ative um ambiente virtual**:
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # Linux/Mac
-   # ou
-   .\venv\Scripts\activate   # Windows
-   ```
-3. **Instale as dependências**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. **Instale as dependências de E2E**:
-   ```bash
-   npm install
-   npx playwright install chromium
-   ```
-
-## Configuração (.env)
-
-Crie um arquivo `.env` na raiz do projeto com as seguintes variáveis:
-
-```ini
-# Configurações Gerais
-LOG_LEVEL=INFO
-
-# Provider LLM (google, ollama, huggingface)
-LLM_PROVIDER=google
-
-# Google Gemini
-GEMINI_API_KEY=
-GEMINI_MODEL=gemini-3-flash-preview
-
-# Opcional: Ollama
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=qwen2.5:0.5b
-
-# Prompt de Sistema
-BOT_SYSTEM_PROMPT="Você é um assistente útil e amigável."
-
-# Integrações remotas do projeto
-REMOTE_PG_HOST=srv1428963.hstgr.cloud
-REMOTE_PG_PORT=5432
-REMOTE_PG_USER=postgres
-REMOTE_PG_PASSWORD=
-REMOTE_PG_DATABASE=procel_analytics
-REMOTE_SPRING_BASE_URL=http://srv1428963.hstgr.cloud:8080
-```
-
-## Execução
-
-Para iniciar o servidor de desenvolvimento com hot-reload:
+## Instalacao Completa
 
 ```bash
-uvicorn app.main:app --reload --port 8001
+git clone https://github.com/DanielPonttes/Chatbot-generico.git
+cd Chatbot-generico
+
+python -m venv .venv
 ```
 
-Acesse:
-- **Chat Principal**: http://localhost:8001/
-- **Teste de Notificações**: http://localhost:8001/notifications
-- **Visualizador RAG**: http://localhost:8001/rag
-- **Documentação Swagger (Auto-gerada)**: http://localhost:8001/docs
+Ative o ambiente:
 
-## Testes
-
-### API
+```powershell
+# Windows PowerShell
+.\.venv\Scripts\Activate.ps1
+```
 
 ```bash
-./venv/bin/pytest tests/test_api.py tests/test_integrations_api.py tests/test_proactive_context.py -q
+# Linux/macOS
+source .venv/bin/activate
 ```
 
-### Interface com Playwright
+Instale dependencias:
 
 ```bash
-npm run test:e2e
+pip install -r requirements.txt
+npm install
+npx playwright install chromium
 ```
 
-Em Linux/WSL, para instalar o Chromium com dependências do sistema:
+Em Linux/WSL:
 
 ```bash
 sudo npx playwright install --with-deps chromium
 ```
 
-## CI
+## Configuracao
 
-O repositório possui workflow em `.github/workflows/ci.yml` com as jobs `Pytest` e `Playwright E2E`.
+Crie o `.env`:
 
-Detalhes adicionais:
+```bash
+cp .env.example .env
+```
 
-- `docs/setup/ci.md`
-- `scripts/apply_branch_protection.sh`
+### Gemini
+
+```env
+LLM_PROVIDER=google
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-3-flash-preview
+```
+
+### Ollama
+
+Instale e rode:
+
+```bash
+ollama serve
+ollama pull qwen2.5:0.5b
+```
+
+Configure:
+
+```env
+LLM_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=qwen2.5:0.5b
+```
+
+### HuggingFace
+
+```env
+LLM_PROVIDER=huggingface
+HF_TOKEN=
+HF_MODEL=microsoft/DialoGPT-small
+```
+
+### Integracoes Remotas
+
+As rotas de catalogo e contexto operacional usam:
+
+```env
+REMOTE_PG_HOST=srv1428963.hstgr.cloud
+REMOTE_PG_PORT=5432
+REMOTE_PG_USER=postgres
+REMOTE_PG_PASSWORD=
+
+REMOTE_PG_SSLMODE=prefer
+REMOTE_PG_CONNECT_TIMEOUT=5
+REMOTE_PG_MAX_LIMIT=100
+
+REMOTE_SPRING_BASE_URL=http://srv1428963.hstgr.cloud:8080
+REMOTE_SPRING_TIMEOUT_SECONDS=15
+```
+
+Se essas variaveis estiverem ausentes ou inacessiveis, o chat basico ainda pode funcionar, mas as rotas `/integrations/*` e o contexto operacional real podem retornar erro de disponibilidade.
+
+## Execucao
+
+```bash
+uvicorn app.main:app --reload --port 8000
+```
+
+Rotas visuais:
+
+- `http://localhost:8000/`
+- `http://localhost:8000/notifications`
+- `http://localhost:8000/rag`
+- `http://localhost:8000/docs`
+- `http://localhost:8000/redoc`
+
+## Testes
+
+### Pytest
+
+```bash
+.\.venv\Scripts\python.exe -m pytest
+```
+
+Linux/macOS:
+
+```bash
+.venv/bin/python -m pytest
+```
+
+### Playwright
+
+```bash
+npm run test:e2e
+```
+
+O `playwright.config.js` sobe o FastAPI em `http://127.0.0.1:8012` quando `PLAYWRIGHT_BASE_URL` nao esta definido.
+
+Para usar um servidor ja aberto:
+
+```bash
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:8000 npm run test:e2e
+```
+
+No PowerShell:
+
+```powershell
+$env:PLAYWRIGHT_BASE_URL="http://127.0.0.1:8000"
+npm run test:e2e
+```
+
+## Dados Locais
+
+Arquivos gerados em runtime:
+
+- `data/db/saved_notifications.db`: notificacoes salvas.
+- `data/conversations.db`: historico de conversa se `USE_SQLITE=true`.
+- `data/chroma_db/`: base vetorial do RAG.
+
+A pasta `data/` e ignorada pelo git.
 
 ## Estrutura de Pastas
 
+```text
+app/
+  api/       # rotas e SQLite de notificacoes
+  core/      # configuracoes
+  models/    # schemas Pydantic
+  rag/       # Chroma, ingestao e busca
+  services/  # LLM, personas, integracoes, contexto operacional
+  static/    # paginas HTML
+docs/
+tests/
+.github/workflows/ci.yml
+package.json
+requirements.txt
 ```
-/
-├── app/
-│   ├── api/            # Rotas da API
-│   ├── core/           # Configurações
-│   ├── models/         # Schemas Pydantic
-│   ├── services/       # Lógica de Negócio (LLM, Personas)
-│   ├── static/         # Frontend (HTML, CSS, JS)
-│   └── main.py         # Entry point
-├── docs/               # Documentação do Projeto
-├── tests/              # Testes automatizados
-├── .github/            # Workflows de CI
-├── package.json        # Setup do Playwright
-├── .env                # Variáveis de ambiente
-└── requirements.txt    # Dependências
-```
+
+## Problemas Comuns
+
+- `No module named pytest`: ative o `.venv` e rode `pip install -r requirements.txt`.
+- Gemini sem chave: confira `GEMINI_API_KEY` no `.env`.
+- RAG falhando: confira `GEMINI_API_KEY` ou `GOOGLE_API_KEY`, pois embeddings usam Google.
+- Ollama indisponivel: rode `ollama serve` e confirme o modelo com `ollama list`.
+- PostgreSQL remoto indisponivel: confirme `REMOTE_PG_*`, rede e permissao.
+- Playwright falhando no Linux: rode `sudo npx playwright install --with-deps chromium`.

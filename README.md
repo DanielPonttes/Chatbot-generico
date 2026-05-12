@@ -1,138 +1,99 @@
-# 🤖 Chatbot Genérico
+# Chatbot Generico
 
-> Um chatbot com FastAPI, personas, RAG opcional, integrações externas e testes automatizados para fluxos de chat e notificações.
+Chatbot em FastAPI com chat interativo, geracao de notificacoes proativas, personas, RAG, persistencia SQLite, catalogo de integracoes externas e testes automatizados.
 
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.109%2B-009688.svg)](https://fastapi.tiangolo.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+## Visao Geral
 
-## 📋 Índice
+O projeto serve tres interfaces HTML estaticas pelo proprio FastAPI:
 
-- [Visão Geral](#-visão-geral)
-- [Requisitos](#-requisitos)
-- [Instalação](#-instalação)
-- [Configuração](#-configuração)
-- [Como Executar](#-como-executar)
-- [Interface Web (Frontend)](#-interface-web-frontend)
-- [Exemplos de Uso](#-exemplos-de-uso)
-- [Estrutura de Pastas](#-estrutura-de-pastas)
-- [API Reference](#-api-reference)
-- [Testes](#-testes)
-- [CI e Qualidade](#-ci-e-qualidade)
-- [Limitações](#-limitações)
-- [Próximos Passos](#-próximos-passos)
+- `/`: chat principal.
+- `/notifications`: gerador e avaliador de notificacoes proativas.
+- `/rag`: visualizador de busca semantica na base vetorial.
 
-## 🎯 Visão Geral
+O backend tambem expoe endpoints JSON para chat, saude, RAG, notificacoes salvas e exploracao das integracoes remotas com PostgreSQL e API Spring Boot.
 
-Este projeto implementa um chatbot em português brasileiro, com:
+## Principais Recursos
 
-- **Memória de conversa**: Mantém contexto das últimas 10 mensagens por sessão
-- **Persona configurável**: Customize o comportamento do bot via variável de ambiente
-- **Múltiplos providers**: Google Gemini, Ollama local ou HuggingFace
-- **API HTTP**: Pronto para integrar com qualquer frontend
-- **Notificações proativas**: Mensagens com perfil-alvo, RAG e contexto operacional real
-- **Integrações externas**: PostgreSQL remoto e API Spring Boot catalogados pelo backend
-- **Cobertura automatizada**: API validada com `pytest` e interface com Playwright
+- Chat com historico por `session_id`.
+- Providers LLM: Google Gemini, Ollama e HuggingFace.
+- Override de modelo por requisicao.
+- Personas fixas: `provocador`, `motivador`, `debochado`.
+- Perfis-alvo: `gastao`, `indiferente`, `engajado`.
+- Tipos de notificacao configurados em `app/services/notification_type.yaml`.
+- Enriquecimento de notificacoes com contexto operacional real: sala, sensor, pessoa e medicoes.
+- RAG com Chroma e embeddings do Gemini.
+- Persistencia de notificacoes em SQLite.
+- Catalogo de tabelas PostgreSQL remotas e endpoints Spring Boot.
+- Testes de API com pytest e E2E com Playwright.
+- CI em GitHub Actions.
 
-### Por que Qwen 2.5 0.5B como modelo padrão?
+## Requisitos
 
-| Modelo | Parâmetros | Tamanho | Qualidade PT-BR | Velocidade |
-|--------|-----------|---------|-----------------|------------|
-| **qwen2.5:0.5b** ⭐ | 500M | ~400MB | Boa | Muito rápido |
-| qwen2.5:1.5b | 1.5B | ~1GB | Muito boa | Rápido |
-| llama3.2:1b | 1B | ~700MB | Boa | Rápido |
-| phi3:mini | 3.8B | ~2GB | Excelente | Moderado |
+- Python 3.11+.
+- Node.js 18+ para Playwright.
+- Uma das opcoes de LLM:
+  - `GEMINI_API_KEY` para Google Gemini.
+  - Ollama local.
+  - `HF_TOKEN` para HuggingFace.
+- Para RAG com embeddings do Google, configure `GEMINI_API_KEY` ou `GOOGLE_API_KEY`.
+- Para contexto operacional remoto, configure as variaveis `REMOTE_PG_*` e `REMOTE_SPRING_BASE_URL`.
 
-O **Qwen 2.5 0.5B** foi escolhido como padrão por ser o menor modelo que ainda entrega respostas aceitáveis em português, ideal para notebooks com recursos limitados.
-
-## 📦 Requisitos
-
-- **Python 3.11+**
-- **Node.js 18+** para os testes E2E com Playwright
-- **Ollama**, **API key do Gemini** ou **token HuggingFace**
-- ~1GB de espaço em disco
-- 4GB+ de RAM recomendado
-
-## 🚀 Instalação
-
-### 1. Clone o repositório
+## Instalacao
 
 ```bash
-git clone <url-do-repositorio>
-cd chatbot-generico
-```
+git clone https://github.com/DanielPonttes/Chatbot-generico.git
+cd Chatbot-generico
 
-### 2. Crie um ambiente virtual
+python -m venv .venv
 
-```bash
-# Criar venv
-python3 -m venv venv
+# Windows PowerShell
+.\.venv\Scripts\Activate.ps1
 
-# Ativar (Linux/Mac)
-source venv/bin/activate
+# Linux/macOS
+# source .venv/bin/activate
 
-# Ativar (Windows)
-.\venv\Scripts\activate
-```
-
-### 3. Instale as dependências
-
-**Opção A: pip (mais simples)**
-```bash
 pip install -r requirements.txt
+npm install
+npx playwright install chromium
 ```
 
-**Opção B: pip com extras de desenvolvimento**
-```bash
-pip install -e ".[dev]"
-```
+`requirements.txt` e o caminho recomendado para rodar a aplicacao completa. O `pyproject.toml` contem a configuracao de pacote e dependencias principais, mas o projeto operacional usa as dependencias completas do `requirements.txt`.
 
-### 4. Configure as variáveis de ambiente
+## Configuracao
+
+Crie um `.env` a partir de `.env.example`:
 
 ```bash
 cp .env.example .env
-# Edite o .env conforme necessário
 ```
 
-## ⚙️ Configuração
+Variaveis principais:
 
-### Usando Ollama (Recomendado) 🏠
+| Variavel | Uso |
+| --- | --- |
+| `LLM_PROVIDER` | `google`, `ollama` ou `huggingface`. |
+| `GEMINI_API_KEY` | Chave do Gemini para chat, RAG e embeddings. |
+| `GEMINI_MODEL` | Modelo Gemini padrao, como `gemini-3-flash-preview`. |
+| `OLLAMA_BASE_URL` | URL local do Ollama. |
+| `OLLAMA_MODEL` | Modelo local, como `qwen2.5:0.5b`. |
+| `HF_TOKEN` | Token HuggingFace. |
+| `HF_MODEL` | Modelo HuggingFace. |
+| `MEMORY_MAX_MESSAGES` | Quantidade maxima de mensagens por sessao. |
+| `USE_SQLITE` | Persistencia opcional do historico de conversa. |
+| `SQLITE_PATH` | Caminho do SQLite de conversas. |
+| `SQLITE_DB_PATH` | Caminho opcional do SQLite de notificacoes salvas. |
+| `REMOTE_PG_*` | Credenciais e limites do PostgreSQL remoto. |
+| `REMOTE_SPRING_BASE_URL` | URL base da API Spring Boot remota. |
 
-O Ollama permite executar modelos LLM localmente, sem custo e sem internet.
+Exemplo minimo com Gemini:
 
-#### Passo 1: Instale o Ollama
-
-```bash
-# Linux
-curl -fsSL https://ollama.ai/install.sh | sh
-
-# Mac
-brew install ollama
-
-# Windows
-# Baixe o instalador em: https://ollama.ai/download
+```env
+LLM_PROVIDER=google
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-3-flash-preview
 ```
 
-#### Passo 2: Inicie o servidor Ollama
-
-```bash
-ollama serve
-```
-
-#### Passo 3: Baixe o modelo
-
-```bash
-# Modelo padrão (recomendado, ~400MB)
-ollama pull qwen2.5:0.5b
-
-# Alternativas (melhor qualidade, mais pesados):
-# ollama pull qwen2.5:1.5b   # ~1GB
-# ollama pull llama3.2:1b    # ~700MB
-# ollama pull phi3:mini      # ~2GB
-# ollama pull deepseek-r1:latest # ~5GB
-```
-
-#### Passo 4: Configure o .env
+Exemplo com Ollama:
 
 ```env
 LLM_PROVIDER=ollama
@@ -140,299 +101,149 @@ OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=qwen2.5:0.5b
 ```
 
-### Usando HuggingFace (Alternativa) 🌐
-
-Se não puder instalar Ollama, use a API do HuggingFace como fallback.
-
-#### Passo 1: Obtenha um token
-
-1. Acesse [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
-2. Clique em "New token"
-3. Dê um nome e copie o token
-
-#### Passo 2: Configure o .env
-
-```env
-LLM_PROVIDER=huggingface
-HF_TOKEN=
-HF_MODEL=microsoft/DialoGPT-small
-```
-
-> ⚠️ **Atenção**: A camada gratuita do HuggingFace tem limites de requisições. Para uso intensivo, prefira Ollama.
-
-### Variáveis de Ambiente Disponíveis
-
-| Variável | Descrição | Padrão |
-|----------|-----------|--------|
-| `LLM_PROVIDER` | Provider a usar: `ollama` ou `huggingface` | `ollama` |
-| `OLLAMA_BASE_URL` | URL do servidor Ollama | `http://localhost:11434` |
-| `OLLAMA_MODEL` | Modelo Ollama | `qwen2.5:0.5b` |
-| `HF_TOKEN` | Token HuggingFace | - |
-| `HF_MODEL` | Modelo HuggingFace | `microsoft/DialoGPT-small` |
-| `BOT_SYSTEM_PROMPT` | Persona do bot | Assistente amigável PT-BR |
-| `MEMORY_MAX_MESSAGES` | Mensagens no histórico | `10` |
-| `USE_SQLITE` | Persistir conversas em SQLite | `false` |
-| `DEBUG` | Ativar logs detalhados | `false` |
-
-## ▶️ Como Executar
-
-### Iniciar o servidor
+## Execucao
 
 ```bash
-# Com uvicorn (recomendado)
-uvicorn app.main:app --reload
-
-# Ou diretamente
-python -m app.main
+uvicorn app.main:app --reload --port 8000
 ```
 
-O servidor iniciará em `http://localhost:8000`.
+Acesse:
 
-### Verificar se está funcionando
+- Chat: `http://localhost:8000/`
+- Notificacoes: `http://localhost:8000/notifications`
+- RAG: `http://localhost:8000/rag`
+- Swagger: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
 
-Acesse no navegador:
-- **Interface de Testes**: http://localhost:8000
-- **Documentação interativa**: http://localhost:8000/docs
-- **Health check**: http://localhost:8000/health
+## Fluxo de Notificacoes
 
-## 🖥️ Interface Web (Frontend)
+`POST /chat/proactive` gera uma notificacao curta e a salva automaticamente como `Pendente`.
 
-O projeto inclui uma interface web de testes integrada, acessível em `http://localhost:8000` quando o servidor está rodando.
+O prompt final pode combinar:
 
-### Recursos
+- persona;
+- perfil-alvo;
+- tipo de notificacao YAML;
+- variaveis dinamicas do tipo;
+- contexto operacional remoto;
+- RAG opcional;
+- override temporario de system prompt;
+- override de modelo.
 
-- **Design moderno escuro** com animações suaves
-- **Indicador de status** do modelo LLM em tempo real
-- **Histórico de mensagens** por sessão
-- **Botões de ação rápida** para testar prompts comuns
-- **Gerenciamento de sessão** (nova sessão, limpar chat)
-
-### Como usar
-
-1. Inicie o servidor:
-   ```bash
-   uvicorn app.main:app --reload
-   ```
-
-2. Acesse no navegador: **http://localhost:8000**
-
-3. Digite sua mensagem e pressione Enter ou clique no botão de enviar
-
-> **Dica**: Use os botões de ação rápida para testar diferentes tipos de perguntas.
-
-## 💬 Exemplos de Uso
-
-### Health Check
+Exemplo:
 
 ```bash
-curl http://localhost:8000/health
-```
-
-Resposta:
-```json
-{
-  "status": "healthy",
-  "provider": "ollama",
-  "model": "qwen2.5:0.5b",
-  "provider_available": true,
-  "message": null
-}
-```
-
-### Enviar Mensagem
-
-```bash
-curl -X POST http://localhost:8000/chat \
+curl -X POST http://localhost:8000/chat/proactive \
   -H "Content-Type: application/json" \
   -d '{
-    "session_id": "usuario-123",
-    "message": "Olá, tudo bem?"
+    "persona_id": "motivador",
+    "target_profile_id": "engajado",
+    "notification_type_id": "reengajamento_streak",
+    "notification_context": {
+      "streak_days": 14,
+      "hours_remaining": 3,
+      "user_first_name": "Daniel"
+    },
+    "room_id": "2",
+    "sensor_external_id": "SII-001",
+    "pessoa_id": "ravilon",
+    "use_rag": true
   }'
 ```
 
-Resposta:
+Resposta resumida:
+
 ```json
 {
-  "session_id": "usuario-123",
-  "reply": "Olá! Tudo bem sim, obrigado por perguntar! Como posso ajudar você hoje?",
-  "provider": "ollama",
-  "model": "qwen2.5:0.5b"
-}
-```
-
-### Continuar Conversa (mesmo session_id)
-
-```bash
-curl -X POST http://localhost:8000/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "session_id": "usuario-123",
-    "message": "Me explique o que é Python"
-  }'
-```
-
-O bot lembrará da conversa anterior porque usamos o mesmo `session_id`.
-
-### Trocar Persona
-
-No arquivo `.env`:
-```env
-BOT_SYSTEM_PROMPT=Você é um professor de programação paciente e didático. Explique conceitos de forma simples, com exemplos práticos.
-```
-
-## 📁 Estrutura de Pastas
-
-```
-chatbot-generico/
-├── .github/
-│   └── workflows/
-│       └── ci.yml                # Pipeline GitHub Actions
-├── app/                           # Código da aplicação
-│   ├── __init__.py
-│   ├── main.py                    # Entry point FastAPI
-│   ├── core/
-│   │   ├── __init__.py
-│   │   └── config.py              # Configurações (Pydantic Settings)
-│   ├── models/
-│   │   ├── __init__.py
-│   │   └── schemas.py             # Schemas request/response
-│   ├── services/
-│   │   ├── __init__.py
-│   │   ├── llm_provider.py        # Providers LLM (Gemini, Ollama, HuggingFace)
-│   │   ├── integration_catalog.py # Catálogo PostgreSQL + Spring
-│   │   ├── proactive_context.py   # Contexto operacional das notificações
-│   │   └── memory.py              # Gerenciador de memória
-│   └── api/
-│       ├── __init__.py
-│       └── routes.py              # Endpoints /chat, /health, /integrations
-├── docs/                          # Documentação funcional e operacional
-├── scripts/
-│   └── apply_branch_protection.sh # Aplica proteção da branch main
-├── tests/                         # Testes automatizados
-│   ├── __init__.py
-│   ├── conftest.py                # Fixtures pytest
-│   ├── test_api.py                # Testes dos endpoints principais
-│   ├── test_integrations_api.py   # Testes do catálogo remoto
-│   ├── test_proactive_context.py  # Testes do contexto operacional
-│   └── e2e/                       # Fluxos Playwright da interface
-├── package.json                   # Setup do Playwright
-├── playwright.config.js           # Runner E2E
-├── .env.example                   # Template de configuração
-├── pyproject.toml                 # Dependências Python
-├── requirements.txt               # Dependências (pip)
-└── README.md                      # Este arquivo
-```
-
-## 📚 API Reference
-
-### POST /chat
-
-Envia uma mensagem e recebe a resposta do chatbot.
-
-**Request Body:**
-```json
-{
-  "session_id": "string (1-100 chars)",
-  "message": "string (1-4000 chars)"
-}
-```
-
-**Response:**
-```json
-{
-  "session_id": "string",
-  "reply": "string",
-  "provider": "google | ollama | huggingface",
-  "model": "string"
-}
-```
-
-**Códigos de Status:**
-- `200`: Sucesso
-- `422`: Erro de validação
-- `503`: Provider não disponível
-
-### GET /health
-
-Verifica o status da aplicação.
-
-**Response:**
-```json
-{
-  "status": "healthy | degraded",
+  "session_id": "uuid-da-notificacao",
+  "reply": "Mensagem gerada",
   "provider": "google",
   "model": "gemini-3-flash-preview",
-  "provider_available": true,
-  "message": null
+  "context_summary": "Resumo do contexto aplicado"
 }
 ```
 
-### POST /chat/proactive
-
-Gera uma mensagem proativa baseada em:
-
-- persona
-- perfil-alvo
-- override de modelo
-- `use_rag`
-- contexto operacional real via `room_id`, `sensor_external_id` e `pessoa_id`
-
-**Campos adicionais de resposta:**
-```json
-{
-  "reply": "string",
-  "context_summary": "string | null"
-}
-```
-
-### GET /integrations/catalog
-
-Retorna o catálogo consolidado de:
-
-- PostgreSQL remoto
-- endpoints Spring Boot
-- recomendações dos recursos mais relevantes
-
-### GET /integrations/context/*
-
-Endpoints usados pela tela `/notifications` para autocomplete de:
-
-- salas
-- sensores
-- pessoas
-
-### GET /docs
-
-Documentação interativa (Swagger UI).
-
-### GET /redoc
-
-Documentação alternativa (ReDoc).
-
-## 🧪 Testes
-
-Execute os testes de API com pytest:
+Depois a notificacao pode ser avaliada:
 
 ```bash
-./venv/bin/pytest tests/test_api.py tests/test_integrations_api.py tests/test_proactive_context.py -q
+curl -X PATCH http://localhost:8000/notifications/saved/{id} \
+  -H "Content-Type: application/json" \
+  -d '{"type": "Aprovada"}'
 ```
 
-Os testes usam mocks para não depender de Ollama, Gemini, banco remoto ou Spring Boot.
+## Endpoints Principais
 
-### Testes E2E com Playwright
+| Metodo | Rota | Descricao |
+| --- | --- | --- |
+| `GET` | `/health` | Saude da aplicacao e provider LLM. |
+| `POST` | `/chat` | Chat interativo com historico. |
+| `GET` | `/personas` | Lista personas. |
+| `GET` | `/target-profiles` | Lista perfis-alvo. |
+| `POST` | `/chat/proactive` | Gera notificacao e salva como pendente. |
+| `POST` | `/rag/search` | Busca semantica direta. |
+| `GET` | `/notifications/saved` | Lista notificacoes salvas. |
+| `POST` | `/notifications/saved` | Salva notificacao manualmente. |
+| `PATCH` | `/notifications/saved/{id}` | Atualiza status para `Pendente`, `Aprovada` ou `Reprovada`. |
+| `DELETE` | `/notifications/saved/{id}` | Remove uma notificacao. |
+| `DELETE` | `/notifications/saved/all` | Remove todas as notificacoes. |
+| `GET` | `/integrations/catalog` | Catalogo consolidado do PostgreSQL e Spring. |
+| `GET` | `/integrations/database/tables` | Lista tabelas remotas. |
+| `GET` | `/integrations/database/tables/{schema}/{table}` | Detalha tabela remota. |
+| `GET` | `/integrations/database/tables/{schema}/{table}/rows` | Amostra linhas da tabela. |
+| `GET` | `/integrations/spring/endpoints` | Lista endpoints Spring catalogados. |
+| `POST` | `/integrations/spring/endpoints/{endpoint_id}/invoke` | Invoca endpoint Spring suportado. |
+| `GET` | `/integrations/context/rooms` | Autocomplete de salas. |
+| `GET` | `/integrations/context/sensors` | Autocomplete de sensores. |
+| `GET` | `/integrations/context/people` | Autocomplete de pessoas. |
 
-Para validar a interface de notificacoes no navegador:
+## Estrutura
+
+```text
+app/
+  api/
+    db.py                 # SQLite de notificacoes salvas
+    routes.py             # Endpoints HTTP
+  core/
+    config.py             # Pydantic Settings
+  models/
+    schemas.py            # DTOs Pydantic
+  rag/
+    ingest.py             # Ingestao de documentos
+    retriever.py          # Busca semantica
+    vector_db.py          # Chroma + embeddings
+  services/
+    integration_catalog.py # PostgreSQL remoto + Spring Boot
+    llm_provider.py        # Gemini, Ollama, HuggingFace
+    memory.py              # Memoria de conversa
+    notification_type.yaml # Templates de notificacao
+    persona_service.py     # Personas e prompt final
+    proactive_context.py   # Contexto operacional real
+  static/
+    index.html
+    notifications.html
+    rag.html
+docs/
+tests/
+```
+
+## Testes
+
+API:
 
 ```bash
-npm install
-npx playwright install chromium
+.\.venv\Scripts\python.exe -m pytest
+```
+
+Ou em Linux/macOS:
+
+```bash
+.venv/bin/python -m pytest
+```
+
+E2E:
+
+```bash
 npm run test:e2e
-```
-
-Em Linux/WSL, se o Chromium reclamar de bibliotecas do sistema, prefira:
-
-```bash
-sudo npx playwright install --with-deps chromium
 ```
 
 Com navegador visivel:
@@ -441,72 +252,28 @@ Com navegador visivel:
 npm run test:e2e:headed
 ```
 
-Observacoes:
+## CI
 
-- A configuracao sobe o FastAPI automaticamente em `http://127.0.0.1:8012` se `PLAYWRIGHT_BASE_URL` nao estiver definido.
-- Se quiser reaproveitar um servidor ja rodando, exporte `PLAYWRIGHT_BASE_URL=http://127.0.0.1:8000` antes do comando.
-- Os cenarios de Playwright mockam `/health`, `/personas`, `/target-profiles`, `/chat/proactive`, `/integrations/context/*` e `/notifications/saved`, entao nao dependem do banco remoto nem do Spring para rodar.
-
-## 🔒 CI e Qualidade
-
-O repositório possui pipeline em [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) com duas gates:
+O workflow `.github/workflows/ci.yml` roda em `push` e `pull_request`:
 
 - `Pytest`
 - `Playwright E2E`
 
-Os mesmos checks podem ser executados localmente com:
+Para detalhes de protecao de branch, veja `docs/setup/ci.md`.
 
-```bash
-./venv/bin/pytest tests/test_api.py tests/test_integrations_api.py tests/test_proactive_context.py -q
-npm run test:e2e
-```
+## Documentacao Adicional
 
-Proteção recomendada para a branch `main`:
+- `docs/setup/installation.md`: instalacao e execucao.
+- `docs/backend/api.md`: referencia de API.
+- `docs/frontend/interfaces.md`: telas HTML.
+- `docs/services/llm_personas.md`: services, personas e notificacoes.
+- `docs/setup/ci.md`: CI e protecao de branch.
+- `docs/docs_for_ai/technical_summary_1703.md`: manifesto tecnico e fluxo de dados.
 
-- merge apenas via pull request
-- pelo menos 1 aprovação
-- dismiss de reviews obsoletos
-- conversation resolution obrigatória
-- status checks obrigatórios: `Pytest` e `Playwright E2E`
-- bloqueio de force-push e delete
+## Observacoes de Producao
 
-Para aplicar a política via API do GitHub:
-
-```bash
-export GITHUB_TOKEN=seu_token_com_administration_write
-./scripts/apply_branch_protection.sh DanielPonttes/Chatbot-generico main
-```
-
-Detalhes em [`docs/setup/ci.md`](./docs/setup/ci.md).
-
-## ⚠️ Limitações
-
-1. **Modelo pequeno**: O Qwen 0.5B é limitado em raciocínio complexo e pode dar respostas genéricas
-2. **Sem RAG**: Não há integração com documentos externos
-3. **Memória simples**: O histórico é apenas concatenado, sem sumarização
-4. **Sem autenticação**: A API é aberta (adicione auth para produção)
-5. **Single-tenant**: Não há isolamento entre usuários
-6. **CPU-only**: Modelos rodam em CPU (GPU acelera significativamente)
-
-## 🚀 Próximos Passos
-
-Sugestões para evoluir o projeto:
-
-1. **Frontend**: Criar interface web com React ou Vue
-2. **Autenticação**: Adicionar JWT ou API keys
-3. **RAG**: Integrar com documentos usando embeddings
-4. **Modelo maior**: Usar phi3:mini ou llama3.2:3b para melhor qualidade
-5. **Cache**: Adicionar Redis para respostas frequentes
-6. **Logs estruturados**: Usar Loguru ou structlog
-7. **Docker**: Containerizar a aplicação
-8. **GPU**: Configurar CUDA/Metal para aceleração
-
-## 📄 Licença
-
-MIT License - use livremente para seu projeto de faculdade! 🎓
-
----
-
-**Desenvolvido para fins educacionais** 📚
-
-Se tiver dúvidas, abra uma issue ou consulte a documentação em `/docs`.
+- A API ainda nao possui autenticacao.
+- CORS esta aberto para facilitar desenvolvimento.
+- Dados sensiveis devem ficar em `.env`, nunca versionados.
+- O banco SQLite e os dados locais ficam em `data/`, que e ignorado pelo git.
+- O RAG depende de chave Google para embeddings.

@@ -1,71 +1,161 @@
-# Documentação do Frontend
+# Documentacao do Frontend
 
-A interface do usuário é composta por páginas HTML estáticas servidas pelo FastAPI, utilizando Vanilla JS e CSS (com Tailwind via CDN).
+O frontend e composto por HTML estatico servido pelo FastAPI em `app/static/`. Nao ha framework SPA; as paginas usam JavaScript no proprio arquivo, Tailwind via CDN e Lucide Icons.
 
-## 1. Chat Principal (`index.html`)
-Localização: `/`
+## Rotas Visuais
 
-Interface de chat padrão "estilo WhatsApp/ChatGPT".
+| Rota | Arquivo | Uso |
+| --- | --- | --- |
+| `/` | `app/static/index.html` | Chat principal. |
+| `/notifications` | `app/static/notifications.html` | Geracao e avaliacao de notificacoes. |
+| `/rag` | `app/static/rag.html` | Visualizacao de busca RAG. |
 
-### Funcionalidades
-- **Histórico**: Exibe mensagens trocadas na sessão atual.
-- **Configuração**: Botão de engrenagem no header abre um modal.
-    - Permite selecionar o **Modelo LLM** (Gemini 3 Flash/Pro).
-    - A escolha é salva em memória JS e enviada em cada requisição `/chat`.
-- **Navegação**: Link para a tela de Notificações.
+## Chat Principal
 
-## 2. Teste de Notificações (`notifications.html`)
-Localização: `/notifications`
+Rota: `/`
 
-Interface dedicada para testar a geração de mensagens proativas (push notifications).
+Funcionalidades:
 
-### Layout
-- **Estilo**: Dark Mode moderno com cartões translúcidos (Glassmorphism).
-- **Configuração**:
-    - **Dropdown Persona**: Seleciona o tom do bot.
-    - **Dropdown Perfil Alvo**: Seleciona o tipo de usuário.
-    - **Botão Configurar**: Abre um modal com:
-      - override de modelo
-      - override de system prompt
-      - toggle de `use_rag`
-      - autocomplete de sala
-      - autocomplete de sensor
-      - autocomplete de pessoa
-- **Exibição**:
-    - Mostra a notificação gerada em um card.
-    - Exibe o modelo efetivamente utilizado na geração.
-    - Exibe um resumo do contexto aplicado quando a resposta foi enriquecida com dados reais.
-- **Avaliação**:
-    - Permite aprovar ou reprovar a notificação.
-    - Persiste as avaliações e exibe uma lista de notificações salvas.
+- Envio de mensagens para `POST /chat`.
+- Historico visual da sessao atual.
+- Indicador de status do provider via `GET /health`.
+- Modal de configuracao com override de modelo.
+- Navegacao para notificacoes e RAG.
 
-### Fluxo de Uso
-1. Usuário seleciona Persona e Perfil.
-2. Opcionalmente abre o modal de configuração para escolher modelo, prompt e contexto operacional.
-3. Se selecionar contexto real, a UI consulta:
-   - `/integrations/context/rooms`
-   - `/integrations/context/sensors`
-   - `/integrations/context/people`
-4. Clica em "Gerar Notificação".
-5. O JS envia `POST /chat/proactive` com os IDs e overrides selecionados.
-6. Exibe a resposta e, quando aplicável, o `context_summary`.
+Fluxo:
 
-### Cobertura Automatizada
+1. Usuario digita mensagem.
+2. JS envia `{ session_id, message, model_override }` para `/chat`.
+3. Backend recupera historico, chama provider LLM e salva a troca na memoria.
+4. UI renderiza a resposta.
 
-A tela `/notifications` possui cobertura E2E com Playwright para:
+## Teste de Notificacoes
 
-- bootstrap inicial da página
-- configuração contextual em viewport menor
-- persistência de feedback aprovado
-- tratamento de erro ao gerar a notificação
+Rota: `/notifications`
 
-Arquivos principais:
+Esta tela testa o fluxo de notificacoes proativas e persiste feedback.
 
-- `tests/e2e/notifications.spec.js`
-- `tests/e2e/helpers/notifications-mocks.js`
+### Controles Principais
+
+- Dropdown de persona (`/personas`).
+- Dropdown de perfil-alvo (`/target-profiles`).
+- Botao para gerar notificacao (`/chat/proactive`).
+- Botoes de aprovar/reprovar.
+- Modal de notificacoes salvas.
+- Modal de configuracao.
+
+### Modal de Configuracao
+
+Permite ajustar:
+
+- modelo LLM (`model_override`);
+- prompt da persona (`persona_override.system_prompt`);
+- toggle de RAG (`use_rag`);
+- sala (`room_id`);
+- sensor (`sensor_external_id`);
+- pessoa (`pessoa_id`).
+
+Os campos de sala, sensor e pessoa usam autocomplete:
+
+- `/integrations/context/rooms`
+- `/integrations/context/sensors`
+- `/integrations/context/people`
+
+### Geracao
+
+Payload enviado para `/chat/proactive`:
+
+```json
+{
+  "persona_id": "provocador",
+  "target_profile_id": "gastao",
+  "model_override": null,
+  "use_rag": true,
+  "room_id": "2",
+  "sensor_external_id": "SII-001",
+  "pessoa_id": "ravilon",
+  "persona_override": null
+}
+```
+
+O backend tambem suporta `notification_type_id` e `notification_context`. A tela atual nao expoe um seletor dedicado para esses campos, mas o endpoint ja aceita o payload para integracoes futuras.
+
+### Resultado
+
+A UI mostra:
+
+- texto da notificacao;
+- persona usada;
+- modelo usado;
+- `context_summary`, quando o backend aplicou contexto operacional.
+
+### Feedback e Historico
+
+Aprovacao/reprovacao chama `POST /notifications/saved` para salvar uma notificacao avaliada manualmente. O backend tambem salva automaticamente cada geracao proativa como `Pendente`.
+
+O modal de salvas usa:
+
+- `GET /notifications/saved`;
+- `DELETE /notifications/saved/{id}`;
+- `DELETE /notifications/saved/all`.
+
+As abas filtram:
+
+- `Aprovada`;
+- `Reprovada`.
+
+Notificacoes `Pendente` existem no backend para avaliacao, mas a UI atual foca na lista de feedback aprovado/reprovado.
+
+## Visualizador RAG
+
+Rota: `/rag`
+
+Funcionalidade:
+
+- envia consultas para `POST /rag/search`;
+- exibe chunks retornados;
+- mostra origem, pagina e score.
+
+Dependencias:
+
+- base Chroma em `data/chroma_db/`;
+- embeddings Google configurados via `GEMINI_API_KEY` ou `GOOGLE_API_KEY`.
+
+## E2E com Playwright
+
+Arquivos:
+
+- `tests/e2e/notifications.spec.js`;
+- `tests/e2e/helpers/notifications-mocks.js`;
+- `playwright.config.js`.
+
+Cenarios cobertos:
+
+- carregamento inicial;
+- configuracao em viewport menor;
+- geracao de notificacao;
+- persistencia de feedback aprovado;
+- tratamento de erro.
+
+Execucao:
+
+```bash
+npm run test:e2e
+```
+
+O teste mocka as rotas principais da tela de notificacoes, entao nao depende de LLM, PostgreSQL remoto nem Spring Boot para validar a experiencia.
 
 ## Tecnologias
-- **HTML5/CSS3**
-- **TailwindCSS** (CDN)
-- **Lucide Icons** (Ícones SVG)
-- **Vanilla JavaScript** (Sem frameworks reativos complexos)
+
+- HTML5.
+- TailwindCSS via CDN.
+- Lucide Icons.
+- JavaScript vanilla.
+- Playwright para E2E.
+
+## Pontos de Atencao
+
+- As paginas estaticas usam chamadas relativas ao mesmo host do FastAPI.
+- `API_BASE` em `notifications.html` usa `window.location.origin`.
+- A autenticacao ainda nao existe; em producao, proteja os endpoints e restrinja CORS.
+- A tela de notificacoes ainda pode evoluir para expor `notification_type_id` e `notification_context` diretamente.

@@ -1,77 +1,217 @@
-# Serviços e Lógica de Negócio
+# Servicos, LLM, Personas e Notificacoes
 
-Esta documentação cobre os componentes centrais de lógica da aplicação, localizados em `app/services/`.
+Esta documentacao cobre os componentes em `app/services/`.
 
-## 1. Persona Service (`persona_service.py`)
+## `llm_provider.py`
 
-Gerencia as personalidades do bot e os perfis de usuários alvo para a geração de mensagens proativas.
+Define a interface `LLMProvider` e tres implementacoes:
 
-### Personas do Bot
-Definem o "tom de voz" do chatbot. Atualmente configuradas:
-1.  **Provocador**: Desafiador, irônico.
-2.  **Motivador**: Positivo, encorajador.
-3.  **Debochado**: Sarcástico, focado no desperdício.
+- `GoogleGeminiProvider`
+- `OllamaProvider`
+- `HuggingFaceProvider`
 
-### Perfis de Usuário Alvo (`TargetProfile`)
-Definem o contexto de quem receberá a mensagem. Atualmente configurados:
-1.  **O Gastão Sem Noção**: Desperdiça energia.
-2.  **O Indiferente**: Ignora o app.
-3.  **O Engajado**: Busca economia.
+### Factory
 
-### Lógica de Geração (`generate_proactive_message`)
-A função combina os seguintes elementos para criar o prompt final enviado ao LLM:
-- **System Prompt da Persona**: Define como o bot se comporta.
-- **Contexto do Target Profile**: Descreve o usuário alvo.
-- **RAG opcional**: Injeta trechos de base de conhecimento quando `use_rag=true`.
-- **Contexto operacional real**: Injeta sala, sensor, pessoa e últimas medições quando `room_id`, `sensor_external_id` e `pessoa_id` são informados.
-- **Instrução Base**: "Gere uma notificação curta..."
+`get_llm_provider()` escolhe o provider a partir de `settings.llm_provider`.
 
-Fluxo:
-`[Persona] + [Target Profile] + [RAG opcional] + [Contexto operacional opcional] -> LLM -> Notificação`
+Valores aceitos:
 
-O retorno inclui:
+- `google`
+- `ollama`
+- `huggingface`
 
-- `message`
-- `context_summary`
+### Override de Modelo
 
-## 2. Proactive Operational Context (`proactive_context.py`)
+Todos os providers aceitam `model_override` em `generate(...)`. O override vale apenas para aquela chamada e nao altera o provider global.
 
-Responsável por montar o bloco de contexto operacional usado nas notificações.
+### Disponibilidade
 
-### Fontes consultadas
+`GET /health` chama `provider.is_available()` para reportar:
 
-- PostgreSQL remoto:
-  - sala por `room_id`
-  - sensor por `sensor_external_id`
-  - pessoa por `pessoa_id`
-- API Spring Boot:
-  - pessoa
-  - última medição por sala
-  - última medição por sensor
+- `healthy`: provider disponivel;
+- `degraded`: provider criado, mas sem resposta adequada;
+- `unhealthy`: falha ao criar/verificar provider.
 
-### Saída produzida
+## `memory.py`
 
-- `summary`: resumo curto para exibição no frontend
-- `prompt_block`: bloco textual incorporado ao prompt do LLM
-- `metadata`: estrutura com os dados enriquecidos
+Gerencia historico de conversa.
 
-## 3. LLM Provider (`llm_provider.py`)
+Modos:
 
-Abstração para comunicação com modelos de linguagem.
+- RAM, padrao.
+- SQLite, quando `USE_SQLITE=true`.
 
-### Estrutura
-- **Classe Base Abstrata**: `LLMProvider`
-- **Implementações**:
-    - `GoogleGeminiProvider`: Usa SDK `google-genai`.
-    - `OllamaProvider`: Usa API local Ollama.
-    - `HuggingFaceProvider`: Usa API v2 do HuggingFace.
+Configuracoes:
 
-### Funcionalidade de Override
-O método `generate` aceita um argumento opcional `model_override`.
-- No **Gemini Provider**, a chamada usa o modelo override apenas naquela requisição, sem alterar o estado global do serviço.
+- `MEMORY_MAX_MESSAGES`
+- `USE_SQLITE`
+- `SQLITE_PATH`
 
-## 4. Gerenciador de Memória (`memory.py`)
+## `persona_service.py`
 
-Gerencia o histórico de conversas.
-- Armazena mensagens em memória (dict) por `session_id`.
-- Formata o histórico para o padrão esperado pelos providers (User/Assistant).
+Compoe o prompt final para notificacoes proativas.
+
+### Personas
+
+As personas definem tom de voz:
+
+| ID | Nome | Intencao |
+| --- | --- | --- |
+| `provocador` | Provocador | Desafia o usuario com ironia leve. |
+| `motivador` | Motivador | Incentiva com tom positivo. |
+| `debochado` | Debochado | Usa sarcasmo leve sobre desperdicio. |
+
+### Perfis-Alvo
+
+Os perfis descrevem o receptor:
+
+| ID | Nome | Contexto |
+| --- | --- | --- |
+| `gastao` | O Gastao Sem Nocao | Desperdica energia e nao se importa. |
+| `indiferente` | O Indiferente | Ignora notificacoes e interage pouco. |
+| `engajado` | O Engajado | Ja busca economia e interage com o app. |
+
+### Tipos de Notificacao
+
+Arquivo: `app/services/notification_type.yaml`
+
+Cada entrada possui:
+
+- `id`
+- `name`
+- `description`
+- `default_use_rag`
+- `required_context_vars`
+- `system_prompt_template`
+
+O YAML e carregado no import do modulo e validado com Pydantic. Erros de estrutura, IDs duplicados e variaveis obrigatorias ausentes no template quebram cedo no startup, em vez de falhar apenas durante uma requisicao.
+
+Tipos atuais:
+
+- `reengajamento_streak`
+- `reengajamento_cofre`
+- `reengajamento_winback`
+- `social_ranking`
+- `social_desafio_cooperativo`
+- `conquista_badge`
+- `conquista_impacto_ambiental`
+
+### Variaveis Dinamicas
+
+`notification_context` preenche o `system_prompt_template` com `str.format_map`.
+
+Exemplo:
+
+```json
+{
+  "notification_type_id": "reengajamento_streak",
+  "notification_context": {
+    "streak_days": 14,
+    "hours_remaining": 3,
+    "user_first_name": "Daniel"
+  }
+}
+```
+
+Variaveis em `required_context_vars` precisam estar presentes. Variaveis opcionais ausentes ficam como `{nome_da_variavel}` por causa do `_SafeDict`, evitando `KeyError`.
+
+### Contexto Operacional
+
+`generate_proactive_message(...)` tambem aceita:
+
+- `room_id`
+- `sensor_external_id`
+- `pessoa_id`
+
+Esses campos sao enviados ao `proactive_context.py`, que tenta buscar:
+
+- sala no PostgreSQL remoto;
+- sensor no PostgreSQL remoto;
+- pessoa no PostgreSQL remoto e/ou Spring;
+- ultima medicao por sala;
+- ultima medicao por sensor.
+
+### RAG
+
+`use_rag` pode ser:
+
+- `true`: forca RAG;
+- `false`: desativa RAG;
+- `null`: usa `default_use_rag` do tipo YAML; sem tipo, usa o comportamento legado `true`.
+
+Quando ativo, o servico chama `get_relevant_context(...)` e injeta trechos da base vetorial no prompt.
+
+### Retorno
+
+O servico retorna `ProactiveMessageResult`:
+
+- `message`: notificacao gerada;
+- `context_summary`: resumo curto para UI;
+- `prompt_used`: prompt completo salvo junto com a notificacao.
+
+## `proactive_context.py`
+
+Monta o contexto operacional real.
+
+Saida:
+
+- `summary`: texto curto para mostrar ao usuario.
+- `prompt_block`: bloco usado no prompt do LLM.
+- `metadata`: dados estruturados coletados.
+
+Falhas de integracao sao tratadas de forma defensiva para que uma indisponibilidade parcial nao impeça sempre a geracao da notificacao.
+
+## `integration_catalog.py`
+
+Centraliza acesso exploratorio ao PostgreSQL remoto e ao catalogo da API Spring Boot.
+
+Responsabilidades:
+
+- testar conexao do PostgreSQL;
+- listar tabelas relevantes;
+- detalhar colunas e chaves;
+- amostrar linhas;
+- buscar salas, sensores e pessoas para autocomplete;
+- listar endpoints Spring;
+- invocar endpoints Spring suportados de forma controlada.
+
+## Fluxo Completo de Notificacao
+
+```text
+POST /chat/proactive
+  -> ProactiveChatRequest
+  -> PersonaService.generate_proactive_message()
+     -> persona
+     -> target profile
+     -> notification_type.yaml
+     -> notification_context
+     -> proactive_context.py
+     -> RAG opcional
+     -> LLM provider
+  -> save_notification()
+  -> ChatResponse
+```
+
+## Persistencia de Notificacoes
+
+Arquivo: `app/api/db.py`
+
+Tabela: `saved_notifications`
+
+Campos:
+
+- `id`
+- `type`
+- `content`
+- `persona`
+- `target_profile`
+- `prompt_used`
+- `model`
+- `date`
+- `created_at`
+
+Tipos aceitos:
+
+- `Pendente`
+- `Aprovada`
+- `Reprovada`

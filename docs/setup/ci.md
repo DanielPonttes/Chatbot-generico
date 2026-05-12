@@ -1,73 +1,98 @@
-# CI e Proteção de Branch
+# CI e Protecao de Branch
 
-Este documento descreve o pipeline de qualidade do projeto e a política recomendada para a branch principal.
+O projeto possui workflow em `.github/workflows/ci.yml` para validar backend e frontend em `push` e `pull_request`.
 
-## Workflow Versionado
+## Jobs
 
-Arquivo: `.github/workflows/ci.yml`
+### `Pytest`
 
-O workflow roda em `push` e `pull_request` com duas jobs:
-
-- `Pytest`
-  - instala as dependências Python
-  - executa `pytest tests/test_api.py tests/test_integrations_api.py tests/test_proactive_context.py -q`
-- `Playwright E2E`
-  - instala Python e Node
-  - executa `npm ci`
-  - instala o Chromium com `npx playwright install --with-deps chromium`
-  - roda `npm run test:e2e`
-  - publica `playwright-report` e `test-results` quando há falha
-
-## Paridade Local
-
-Os mesmos checks podem ser executados localmente com:
+Executa:
 
 ```bash
-./venv/bin/pytest tests/test_api.py tests/test_integrations_api.py tests/test_proactive_context.py -q
+pytest tests/test_api.py tests/test_integrations_api.py tests/test_proactive_context.py -q
+```
+
+Cobertura:
+
+- `/health`
+- `/chat`
+- contexto operacional proativo
+- catalogo de integracoes
+- endpoints auxiliares mockados
+
+### `Playwright E2E`
+
+Executa:
+
+```bash
 npm ci
-npx playwright install chromium
+npx playwright install --with-deps chromium
 npm run test:e2e
 ```
 
-Em Linux/WSL, se o Chromium reclamar de dependências do sistema:
+Cobertura:
+
+- tela `/notifications`;
+- bootstrap inicial;
+- modal de configuracao;
+- geracao mockada;
+- feedback salvo;
+- tratamento de erro.
+
+Em falha, o workflow publica:
+
+- `playwright-report`;
+- `test-results`.
+
+## Paridade Local
 
 ```bash
-sudo npx playwright install --with-deps chromium
+.\.venv\Scripts\python.exe -m pytest
+npm run test:e2e
 ```
 
-## Política Recomendada para `main`
-
-A branch `main` deve exigir:
-
-- pull request antes de merge
-- pelo menos 1 aprovação
-- dismiss de reviews obsoletos após novo push
-- conversation resolution obrigatória
-- status checks obrigatórios:
-  - `Pytest`
-  - `Playwright E2E`
-- force-push desabilitado
-- deleção da branch desabilitada
-- proteção aplicada também para administradores
-
-## Aplicação Automatizada
-
-Script versionado:
-
-- `scripts/apply_branch_protection.sh`
-
-Exemplo:
+Linux/macOS:
 
 ```bash
-export GITHUB_TOKEN=seu_token_com_permissao_administrativa
+.venv/bin/python -m pytest
+npm run test:e2e
+```
+
+## Protecao Recomendada para `main`
+
+Regras recomendadas:
+
+- exigir pull request antes de merge;
+- exigir pelo menos 1 aprovacao;
+- descartar aprovacoes antigas apos novo push;
+- exigir resolucao de conversas;
+- exigir checks:
+  - `Pytest`;
+  - `Playwright E2E`;
+- bloquear force-push;
+- bloquear delete da branch;
+- aplicar tambem para administradores quando o fluxo do time permitir.
+
+## Script de Protecao
+
+Arquivo:
+
+```text
+scripts/apply_branch_protection.sh
+```
+
+Uso:
+
+```bash
+export GITHUB_TOKEN=token_com_permissao_administrativa
 ./scripts/apply_branch_protection.sh DanielPonttes/Chatbot-generico main
 ```
 
 Requisitos do token:
 
-- acesso ao repositório
-- permissão de administração da branch ou do repositório
+- acesso ao repositorio;
+- permissao administrativa para alterar protecao da branch.
 
-## Limitação Atual
+## Observacao
 
-Nesta sessão, a proteção da branch não pôde ser aplicada diretamente pelo conector do GitHub porque a operação administrativa retornou `403 Resource not accessible by integration`, e não havia `GITHUB_TOKEN` nem `gh` configurados no ambiente.
+Se o GitHub retornar `403 Resource not accessible by integration`, use um token pessoal com permissao administrativa ou aplique a protecao pela interface do GitHub.

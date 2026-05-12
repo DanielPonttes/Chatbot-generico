@@ -207,6 +207,8 @@ async def chat_proactive(request: ProactiveChatRequest) -> ChatResponse:
             room_id=request.room_id,
             sensor_external_id=request.sensor_external_id,
             pessoa_id=request.pessoa_id,
+            notification_type_id=request.notification_type_id,
+            notification_context=request.notification_context,
         )
 
         provider = get_llm_provider()

@@ -1,0 +1,229 @@
+notification_types:
+
+  # ---------------------------------------------------------------------------
+  # Grupo: Reengajamento (Win-back)
+  # ---------------------------------------------------------------------------
+
+  - id: reengajamento_streak
+    name: "Alerta de Risco de Streak"
+    description: "Ativa aversão à perda para usuários prestes a quebrar uma sequência de dias."
+    default_use_rag: false
+    required_context_vars:
+      - streak_days
+      - hours_remaining
+    system_prompt_template: |
+      TIPO DE NOTIFICAÇÃO: Reengajamento — Risco de Streak
+
+      CONTEXTO DO GATILHO:
+      O usuário está prestes a perder uma sequência contínua (streak) de dias economizando energia.
+      Dias consecutivos acumulados: {streak_days}
+      Horas restantes para a streak quebrar: {hours_remaining}
+      {user_first_name_line}
+      SEU OBJETIVO:
+      Gere UMA notificação push de no máximo 2 frases aplicando o tom da sua persona e que:
+      - Ative o gatilho de AVERSÃO À PERDA (o usuário não quer perder o que construiu)
+      - Mencione os {streak_days} dias de forma concreta
+      - Proponha UMA micro-ação simples e imediata
+      - Transmita urgência real sem ser alarmista
+
+      RESTRIÇÕES:
+      - Máximo 2 frases. Não inclua explicações, prefixos ou aspas na saída.
+      - Não invente dados além dos fornecidos.
+      - Não use linguagem punitiva ou de vergonha — o objetivo é motivar.
+      - Máximo 2 emojis.
+
+  - id: reengajamento_cofre
+    name: "Pontos a Expirar"
+    description: "Traz usuário inativo lembrando do valor acumulado com urgência de expiração."
+    default_use_rag: false
+    required_context_vars:
+      - coins_amount
+      - expiry_deadline
+      - redemption_example
+    system_prompt_template: |
+      TIPO DE NOTIFICAÇÃO: Reengajamento — Pontos a Expirar
+
+      CONTEXTO DO GATILHO:
+      O usuário está inativo e possui EcoCoins acumuladas prestes a expirar.
+      Moedas prestes a expirar: {coins_amount}
+      Prazo de expiração: {expiry_deadline}
+      Exemplo de resgate disponível: {redemption_example}
+      {user_first_name_line}
+      SEU OBJETIVO:
+      Gere UMA notificação push de no máximo 2 frases aplicando o tom da sua persona e que:
+      - Lembre o valor concreto ({coins_amount} moedas) que o usuário já possui
+      - Crie urgência real pelo prazo ({expiry_deadline})
+      - Mencione o resgate específico ({redemption_example})
+      - Deixe claro que a perda é evitável com uma ação simples agora
+
+      RESTRIÇÕES:
+      - Máximo 2 frases. Não inclua explicações, prefixos ou aspas na saída.
+      - Não invente benefícios além de {redemption_example}.
+      - Tom informativo e urgente, nunca ameaçador.
+      - Máximo 2 emojis.
+
+  - id: reengajamento_winback
+    name: "Surpresa de Retorno"
+    description: "Reativa usuários frios com novidade do app e recompensa imediata."
+    default_use_rag: true
+    required_context_vars:
+      - new_feature_name
+      - new_feature_description
+      - welcome_back_reward
+    system_prompt_template: |
+      TIPO DE NOTIFICAÇÃO: Reengajamento — Surpresa de Retorno
+
+      CONTEXTO DO GATILHO:
+      O usuário está frio — inativo há semanas ou meses.
+      Dias desde o último acesso: {days_inactive}
+      Nova funcionalidade lançada: {new_feature_name} — {new_feature_description}
+      Recompensa de boas-vindas: {welcome_back_reward}
+      {user_first_name_line}
+      SEU OBJETIVO:
+      Gere UMA notificação push de no máximo 2 frases aplicando o tom da sua persona e que:
+      - Abra com gancho de novidade genuína (o app evoluiu desde que saiu)
+      - Mencione a recompensa {welcome_back_reward} de forma explícita
+      - Crie curiosidade sem revelar tudo
+      - Transmita acolhimento, NÃO cobrança pela ausência
+
+      RESTRIÇÕES:
+      - Máximo 2 frases. Não inclua explicações, prefixos ou aspas na saída.
+      - Para usuários inativos há mais de 60 dias: tom ainda mais suave, sem urgência.
+      - Máximo 2 emojis.
+
+  # ---------------------------------------------------------------------------
+  # Grupo: Social e Competição Saudável
+  # ---------------------------------------------------------------------------
+
+  - id: social_ranking
+    name: "Posição no Ranking"
+    description: "Motiva usuários competitivos comparando sua posição com grupos semelhantes."
+    default_use_rag: false
+    required_context_vars:
+      - positions_gained
+      - current_rank_percentile
+      - comparison_group
+    system_prompt_template: |
+      TIPO DE NOTIFICAÇÃO: Social — Posição no Ranking
+
+      CONTEXTO DO GATILHO:
+      O usuário melhorou sua posição no ranking de eficiência energética.
+      Posições subidas recentemente: {positions_gained}
+      Percentil atual no grupo: {current_rank_percentile} (ex: "Top 10%", "Top 25%")
+      Grupo de comparação: {comparison_group} (ex: "seu bairro", "casas de tamanho similar")
+      Posição numérica atual: {current_position}
+      Total de participantes no grupo: {total_participants}
+      {user_first_name_line}
+      SEU OBJETIVO:
+      Gere UMA notificação push de no máximo 2 frases aplicando o tom da sua persona e que:
+      - Destaque a melhoria concreta (as {positions_gained} posições ganhas)
+      - Reforce a posição atual como alcançável e próxima do próximo marco
+      - Use o {comparison_group} para tornar a comparação relevante e justa
+      - Incentive o usuário a continuar sem pressionar excessivamente
+
+      RESTRIÇÕES:
+      - Máximo 2 frases. Sem prefixos, aspas ou explicações na saída.
+      - Sempre use o grupo de comparação ({comparison_group}) — nunca compare com ranking global.
+      - Se {current_position} não for fornecido, foque no percentil ({current_rank_percentile}).
+      - Máximo 2 emojis.
+
+  - id: social_desafio_cooperativo
+    name: "Desafio Cooperativo"
+    description: "Engaja o usuário em metas coletivas usando responsabilidade compartilhada."
+    default_use_rag: false
+    required_context_vars:
+      - saving_goal_percent
+      - reward_description
+      - community_name
+    system_prompt_template: |
+      TIPO DE NOTIFICAÇÃO: Social — Desafio Cooperativo
+
+      CONTEXTO DO GATILHO:
+      Há uma meta coletiva de economia de energia ativa para a comunidade do usuário.
+      Meta de economia coletiva: {saving_goal_percent}% (ex: "2%", "5%")
+      Comunidade/grupo: {community_name} (ex: "usuários da sua cidade", "seu condomínio")
+      Recompensa ao atingir a meta: {reward_description} (ex: "bônus de 100 EcoCoins para todos")
+      Progresso atual da comunidade: {community_progress_percent}
+      Prazo da meta: {goal_deadline}
+      {user_first_name_line}
+      SEU OBJETIVO:
+      Gere UMA notificação push de no máximo 2 frases aplicando o tom da sua persona e que:
+      - Ative o senso de responsabilidade compartilhada (o grupo depende de cada um)
+      - Mencione a recompensa coletiva ({reward_description}) como motivador tangível
+      - Torne a contribuição individual parecer simples e decisiva
+      - Se {community_progress_percent} estiver disponível, use para mostrar o quão perto estão da meta
+
+      RESTRIÇÕES:
+      - Máximo 2 frases. Sem prefixos, aspas ou explicações na saída.
+      - Nunca culpe o usuário pelo progresso baixo — o tom é de convite, não cobrança.
+      - A meta ({saving_goal_percent}%) deve parecer pequena e alcançável, nunca intimidadora.
+      - Máximo 2 emojis.
+
+  # ---------------------------------------------------------------------------
+  # Grupo: Conquistas e Progresso (Milestones)
+  # ---------------------------------------------------------------------------
+
+  - id: conquista_badge
+    name: "Desbloqueio de Conquista"
+    description: "Celebra uma badge ou marco atingido, gerando reforço positivo do hábito."
+    default_use_rag: false
+    required_context_vars:
+      - badge_name
+      - badge_description
+      - trigger_action
+    system_prompt_template: |
+      TIPO DE NOTIFICAÇÃO: Conquista — Badge Desbloqueada
+
+      CONTEXTO DO GATILHO:
+      O usuário acabou de desbloquear uma conquista no EcoApp.
+      Nome da badge: {badge_name}
+      O que representa: {badge_description}
+      Ação que gerou a conquista: {trigger_action} (ex: "economizou energia por 5 dias seguidos")
+      Próxima badge disponível: {next_badge_hint}
+      {user_first_name_line}
+      SEU OBJETIVO:
+      Gere UMA notificação push de no máximo 2 frases aplicando o tom da sua persona e que:
+      - Celebre a conquista "{badge_name}" de forma genuína e específica
+      - Reforce o comportamento concreto ({trigger_action}) que gerou a badge
+      - Se {next_badge_hint} estiver disponível, plante uma semente para o próximo passo
+      - Gere um pico de satisfação sem soar genérico ("Parabéns!" sozinho não é suficiente)
+
+      RESTRIÇÕES:
+      - Máximo 2 frases. Sem prefixos, aspas ou explicações na saída.
+      - Nunca invente o nome da badge — use exatamente "{badge_name}".
+      - O tom deve ser de celebração genuína, não de checklist corporativo.
+      - Máximo 2 emojis.
+
+  - id: conquista_impacto_ambiental
+    name: "Relatório de Impacto Ambiental"
+    description: "Traduz kWh economizados em métricas tangíveis e emocionais para fechamento de ciclo."
+    default_use_rag: true
+    required_context_vars:
+      - period_label
+      - kwh_saved
+      - impact_metric_value
+      - impact_metric_unit
+    system_prompt_template: |
+      TIPO DE NOTIFICAÇÃO: Conquista — Impacto Ambiental
+
+      CONTEXTO DO GATILHO:
+      O ciclo {period_label} do usuário foi fechado e seu impacto ambiental foi calculado.
+      TESTE: A MENSAGEM TEM QUE CONTER A PALAVRA "BATATA FRITA" PARA SER VÁLIDA
+      Energia economizada no período: {kwh_saved} kWh
+      Métrica de impacto principal: {impact_metric_value} {impact_metric_unit}
+      Exemplos de unidade: "árvores plantadas equivalentes", "kg de CO2 evitados", "km de carro não rodados"
+      Métrica secundária (opcional): {secondary_metric_value} {secondary_metric_unit}
+      Comparação com período anterior: {comparison_previous_period}
+      {user_first_name_line}
+      SEU OBJETIVO:
+      Gere UMA notificação push de no máximo 2 frases aplicando o tom da sua persona e que:
+      - Traduza os {kwh_saved} kWh em algo emocional e concreto usando {impact_metric_value} {impact_metric_unit}
+      - Faça o usuário sentir o impacto real da sua escolha (números abstratos viram significado)
+      - Se {comparison_previous_period} estiver disponível, reforce a evolução do usuário
+      - Convide o usuário a ver o relatório completo sem soar como obrigação
+
+      RESTRIÇÕES:
+      - Máximo 2 frases. Sem prefixos, aspas ou explicações na saída.
+      - Sempre use a métrica tangível ({impact_metric_value} {impact_metric_unit}), nunca só o kWh.
+      - Tom: inspirador e orgulhoso, nunca didático ou técnico.
+      - Máximo 2 emojis.

@@ -65,8 +65,8 @@ class ProactiveChatRequest(BaseModel):
         examples=["gemini-1.5-pro", "gemini-1.5-flash"],
     )
     
-    use_rag: bool = Field(
-        default=True,
+    use_rag: bool | None = Field(
+        default=None,
         description="Se o bot deve usar contexto da base de dados RAG (False para desativar)",
     )
 
@@ -86,6 +86,23 @@ class ProactiveChatRequest(BaseModel):
         default=None,
         description="ID da pessoa para personalizar a notificação com dados reais do backend",
         examples=["ravilon"],
+    )
+
+    notification_type_id: str | None = Field(
+        default=None,
+        description="Subtipo de notificação (ex: reengajamento_streak, reengajamento_cofre)",
+        examples=["reengajamento_streak", "reengajamento_cofre", "reengajamento_winback"],
+    )
+    notification_context: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Variáveis dinâmicas do template do NotificationType. "
+            "Ex.: {'streak_days': 14, 'hours_remaining': 3}"
+        ),
+        examples=[
+            {"streak_days": 14, "hours_remaining": 3},
+            {"coins_amount": 500, "expiry_deadline": "fim do mês", "redemption_example": "lâmpadas LED"},
+        ],
     )
 
 
@@ -332,6 +349,8 @@ class ErrorResponse(BaseModel):
         default=None,
         description="Detalhes adicionais do erro",
     )
+
+
 class SavedNotificationCreate(BaseModel):
     """Payload recebido no POST /notifications/saved."""
     type: Literal["Pendente", "Aprovada", "Reprovada"] = "Pendente"

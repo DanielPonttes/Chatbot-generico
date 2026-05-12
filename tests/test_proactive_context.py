@@ -137,4 +137,6 @@ def test_chat_proactive_accepts_operational_context(client, patched_services, mo
         room_id="2",
         sensor_external_id="SII-001",
         pessoa_id="ravilon",
+        notification_type_id=None,
+        notification_context=None,
     )

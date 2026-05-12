@@ -207,27 +207,28 @@ class GoogleGeminiProvider(LLMProvider):
     
     Requer API Key (GEMINI_API_KEY).
     """
-    
     def __init__(
         self,
-        api_key: str | None = settings.gemini_api_key,
-        model_name: str = settings.gemini_model,
+        api_key: str | None = None,
+        model_name: str | None = None,
         timeout: float = 60.0,
     ):
+        actual_key = api_key or settings.gemini_api_key
+        actual_model = model_name or settings.gemini_model
         if not genai:
             raise ImportError(
                 "Biblioteca 'google-genai' (google-genai) não instalada. "
                 "Adicione ao requirements.txt."
             )
             
-        if not api_key:
+        if not actual_key:
             raise ValueError(
                 "API Key do Gemini não configurada. "
                 "Defina a variável de ambiente GEMINI_API_KEY."
             )
-        
-        self._client = genai.Client(api_key=api_key)
-        self._model_name = model_name
+
+        self._client = genai.Client(api_key=actual_key)
+        self._model_name = actual_model
         self._timeout = timeout
     
     @property

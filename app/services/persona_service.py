@@ -31,6 +31,7 @@ class TargetProfile:
 class ProactiveMessageResult:
     message: str
     context_summary: str | None = None
+    prompt_used: str | None = None
 
 # Configuração das 3 personas (tons) do Bot
 PERSONAS = [
@@ -192,6 +193,7 @@ class PersonaService:
             return ProactiveMessageResult(
                 message=message,
                 context_summary=operational_context.summary,
+                prompt_used=prompt,
             )
         except Exception as e:
             logger.error(f"Erro ao gerar mensagem proativa para {persona_id}: {e}")

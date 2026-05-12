@@ -332,23 +332,27 @@ class ErrorResponse(BaseModel):
         default=None,
         description="Detalhes adicionais do erro",
     )
+class SavedNotificationCreate(BaseModel):
+    """Payload recebido no POST /notifications/saved."""
+    type: Literal["Pendente", "Aprovada", "Reprovada"] = "Pendente"
+    content: str
+    persona: str
+    model: str
+    target_profile: str | None = None
+    prompt_used: str | None = None
+    id: str | None = None
+    date: str | None = None
 
+class SavedNotificationResponse(BaseModel):
+    """Payload retornado nas respostas."""
+    id: str
+    type: str
+    content: str
+    persona: str
+    model: str
+    date: str
+    target_profile: str | None = None
+    prompt_used: str | None = None
 
-class SavedNotificationItem(BaseModel):
-    """Modelo base para Notificação Salva."""
-    id: str = Field(description="ID gerado no frontend (timestamp)")
-    type: Literal["like", "dislike"] = Field(description="Tipo de avaliação")
-    content: str = Field(description="Conteúdo da notificação")
-    persona: str = Field(description="Nome da persona usada")
-    model: str = Field(description="Modelo LLM usado")
-    date: str = Field(description="Data formatada no frontend")
-
-
-class SavedNotificationCreate(SavedNotificationItem):
-    """Request para salvar nova notificação."""
-    pass
-
-
-class SavedNotificationResponse(SavedNotificationItem):
-    """Response com item salvo."""
-    pass
+class NotificationTypeUpdate(BaseModel):
+    type: Literal["Pendente", "Aprovada", "Reprovada"]

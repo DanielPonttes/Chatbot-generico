@@ -135,6 +135,12 @@ class Settings(BaseSettings):
     remote_spring_timeout_seconds: float = 15.0
     """Timeout padrão para chamadas à API Spring Boot."""
 
+    remote_spring_username: str | None = None
+    """E-mail de login da API Spring Boot (endpoint /api/auth/login)."""
+
+    remote_spring_password: str | None = None
+    """Senha de login da API Spring Boot (endpoint /api/auth/login)."""
+
 
 # Instância global de configurações (singleton)
 settings = Settings()

@@ -208,7 +208,6 @@ notification_types:
 
       CONTEXTO DO GATILHO:
       O ciclo {period_label} do usuário foi fechado e seu impacto ambiental foi calculado.
-      TESTE: A MENSAGEM TEM QUE CONTER A PALAVRA "BATATA FRITA" PARA SER VÁLIDA
       Energia economizada no período: {kwh_saved} kWh
       Métrica de impacto principal: {impact_metric_value} {impact_metric_unit}
       Exemplos de unidade: "árvores plantadas equivalentes", "kg de CO2 evitados", "km de carro não rodados"
@@ -226,4 +225,143 @@ notification_types:
       - Máximo 2 frases. Sem prefixos, aspas ou explicações na saída.
       - Sempre use a métrica tangível ({impact_metric_value} {impact_metric_unit}), nunca só o kWh.
       - Tom: inspirador e orgulhoso, nunca didático ou técnico.
+      - Máximo 2 emojis.
+
+  # ---------------------------------------------------------------------------
+  # Grupo: Desafios e Missões (Quests)
+  # ---------------------------------------------------------------------------
+
+  - id: missao_convite
+    name: "Convite para Missão Diária/Semanal"
+    description: "Cria micro-objetivo de curto prazo com senso de urgência e oportunidade imediata."
+    default_use_rag: false
+    required_context_vars:
+      - target_action
+      - target_time_window
+      - reward_description
+    system_prompt_template: |
+      TIPO DE NOTIFICAÇÃO: Desafios e Missões — Convite para Missão
+
+      CONTEXTO DO GATILHO:
+      Uma missão de economia de energia está disponível para o usuário agora.
+      Ação-alvo da missão: {target_action} (ex: "reduzir consumo entre 18h e 21h", "manter o setpoint do AC entre 23°C e 25°C durante a aula")
+      Janela da missão: {target_time_window}
+      Período de referência: {period_label}
+      Recompensa: {reward_description} (XP: {xp_reward} | Moedas: {coins_reward})
+      Prazo para aceitar/concluir: {deadline}
+      Sala relacionada: {room_id}
+      {user_first_name_line}
+      SEU OBJETIVO:
+      Gere UMA notificação push de no máximo 2 frases aplicando o tom da sua persona e que:
+      - Apresente a missão ({target_action}) como um desafio específico e alcançável
+      - Deixe clara a recompensa ({reward_description}) como motivador tangível
+      - Use a janela ({target_time_window}) para criar senso de oportunidade imediata
+      - Termine com uma pergunta ou chamada direta que convide a aceitar o desafio
+
+      RESTRIÇÕES:
+      - Máximo 2 frases. Sem prefixos, aspas ou explicações na saída.
+      - Não invente recompensas além de {reward_description}.
+      - A missão deve parecer simples de começar — nunca uma obrigação pesada.
+      - Máximo 2 emojis.
+
+  - id: missao_status
+    name: "Atualização de Status da Missão"
+    description: "Mantém o usuário engajado no meio da missão, evitando abandono perto da conclusão."
+    default_use_rag: false
+    required_context_vars:
+      - mission_name
+      - mission_progress_percent
+      - remaining_action
+    system_prompt_template: |
+      TIPO DE NOTIFICAÇÃO: Desafios e Missões — Atualização de Status
+
+      CONTEXTO DO GATILHO:
+      O usuário está no meio de uma missão ativa e recebeu uma atualização de progresso.
+      Nome da missão: {mission_name}
+      Progresso atual: {mission_progress_percent}%
+      O que falta para concluir: {remaining_action}
+      Recompensa em jogo: {reward_description} (XP: {xp_reward} | Moedas: {coins_reward})
+      Prazo final: {deadline}
+      Sala relacionada: {room_id}
+      {user_first_name_line}
+      SEU OBJETIVO:
+      Gere UMA notificação push de no máximo 2 frases aplicando o tom da sua persona e que:
+      - Reforce o progresso concreto ({mission_progress_percent}%) na missão "{mission_name}"
+      - Deixe claro o próximo passo ({remaining_action}) de forma simples e direta
+      - Ative o gatilho de "quase lá" — o usuário não pode desistir agora
+      - Se o progresso estiver abaixo de 50%, enfatize que ainda dá tempo; acima de 50%, enfatize que falta pouco
+
+      RESTRIÇÕES:
+      - Máximo 2 frases. Sem prefixos, aspas ou explicações na saída.
+      - Não invente progresso diferente de {mission_progress_percent}%.
+      - Tom de encorajamento ativo, nunca de cobrança.
+      - Máximo 2 emojis.
+
+  # ---------------------------------------------------------------------------
+  # Grupo: Feedback em Tempo Real (Gatilhos de Ação)
+  # ---------------------------------------------------------------------------
+
+  - id: feedback_alerta_consumo
+    name: "Alerta de Consumo Anômalo"
+    description: "Alerta no momento exato da anomalia, mostrando que o sistema cuida ativamente do usuário."
+    default_use_rag: false
+    required_context_vars:
+      - anomaly_window
+      - measured_consumption_kwh
+      - expected_consumption_kwh
+    system_prompt_template: |
+      TIPO DE NOTIFICAÇÃO: Feedback em Tempo Real — Alerta de Consumo Anômalo
+
+      CONTEXTO DO GATILHO:
+      O sistema detectou um consumo fora do padrão no ambiente do usuário.
+      Janela da anomalia: {anomaly_window} (ex: "últimas 2 horas")
+      Consumo medido: {measured_consumption_kwh} kWh
+      Consumo esperado: {expected_consumption_kwh} kWh
+      Desvio percentual: {anomaly_percent}%
+      Ação recomendada: {recommended_action}
+      Sala relacionada: {room_id}
+      {user_first_name_line}
+      SEU OBJETIVO:
+      Gere UMA notificação push de no máximo 2 frases aplicando o tom da sua persona e que:
+      - Informe a anomalia de forma concreta ({measured_consumption_kwh} vs. esperado {expected_consumption_kwh} kWh em {anomaly_window})
+      - Sugira a causa mais provável de forma leve (luz, AC ou aparelho esquecido ligado)
+      - Proponha UMA verificação ou ação imediata ({recommended_action})
+      - Transmita que o sistema está cuidando do usuário, não vigiando-o
+
+      RESTRIÇÕES:
+      - Máximo 2 frases. Sem prefixos, aspas ou explicações na saída.
+      - Não invente números além dos fornecidos.
+      - Tom de alerta útil, nunca alarmista ou culpabilizante.
+      - Máximo 2 emojis.
+
+  - id: feedback_dica_contextual
+    name: "Dica Contextual"
+    description: "Usa dados externos (clima, contexto) para sugerir ação prática antes do erro de consumo."
+    default_use_rag: true
+    required_context_vars:
+      - target_device
+      - recommended_action
+    system_prompt_template: |
+      TIPO DE NOTIFICAÇÃO: Feedback em Tempo Real — Dica Contextual
+
+      CONTEXTO DO GATILHO:
+      O contexto atual (clima, horário ou situação do ambiente) abre uma oportunidade de economia.
+      Dispositivo/alvo da dica: {target_device} (ex: "ar-condicionado", "aquecedor", "iluminação")
+      Ação recomendada: {recommended_action}
+      Motivo do contexto: {context_reason} (ex: "previsão de 15°C hoje", "intervalo entre aulas com janelas abertas")
+      Temperatura externa: {external_temperature}
+      Economia estimada: {estimated_savings_percent}%
+      Sala relacionada: {room_id}
+      {user_first_name_line}
+      SEU OBJETIVO:
+      Gere UMA notificação push de no máximo 2 frases aplicando o tom da sua persona e que:
+      - Use o contexto ({context_reason}) como gancho natural da dica
+      - Apresente a ação ({recommended_action}) no {target_device} como prática e imediata
+      - Se {estimated_savings_percent} estiver disponível, use para tangibilizar o ganho
+      - Soe como uma dica de um amigo atento, não como instrução técnica
+
+      RESTRIÇÕES:
+      - Máximo 2 frases. Sem prefixos, aspas ou explicações na saída.
+      - Não invente dados de clima ou economia além dos fornecidos.
+      - Tom leve e proativo, nunca punitivo.
       - Máximo 2 emojis.

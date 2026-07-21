@@ -91,6 +91,7 @@ class ProactiveOperationalContextService:
                 latest_endpoint_id="room_measurements_latest",
                 list_endpoint_id="room_measurements_list",
                 path_params={"room_id": room_id},
+                db_fallback=lambda: self._safe_fetch_db_measurement("room", room_id),
             )
             if room_id
             else None
@@ -105,6 +106,9 @@ class ProactiveOperationalContextService:
                 latest_endpoint_id="sensor_measurements_latest",
                 list_endpoint_id="sensor_measurements_list",
                 path_params={"sensor_external_id": sensor_external_id},
+                db_fallback=lambda: self._safe_fetch_db_measurement(
+                    "sensor", sensor_external_id
+                ),
             )
             if sensor_external_id
             else None
@@ -164,11 +168,24 @@ class ProactiveOperationalContextService:
             logger.warning("Falha ao buscar pessoa_id=%s no PostgreSQL remoto: %s", pessoa_id, exc)
             return None
 
+    def _safe_fetch_db_measurement(self, scope: str, key: str) -> dict[str, Any] | None:
+        """Fallback: busca a última medição direto no PostgreSQL remoto."""
+        try:
+            if scope == "room":
+                return self.db_service.fetch_latest_room_measurement(key)
+            return self.db_service.fetch_latest_sensor_measurement(key)
+        except RemoteDatabaseError as exc:
+            logger.warning(
+                "Falha ao buscar medição %s=%s no PostgreSQL remoto: %s", scope, key, exc
+            )
+            return None
+
     def _safe_fetch_measurement(
         self,
         latest_endpoint_id: str,
         list_endpoint_id: str,
         path_params: dict[str, str | None],
+        db_fallback=None,
     ) -> dict[str, Any] | None:
         clean_path_params = {
             key: value for key, value in path_params.items() if value is not None
@@ -184,25 +201,25 @@ class ProactiveOperationalContextService:
         except RemoteSpringApiError as exc:
             logger.warning("Falha ao consultar endpoint %s: %s", latest_endpoint_id, exc)
 
+        measurement: dict[str, Any] | None = None
         try:
             response = self.spring_service.invoke_endpoint(
                 endpoint_id=list_endpoint_id,
                 path_params=clean_path_params,
             )
+            if response["status_code"] == 200 and isinstance(response["data"], list):
+                measurements = [item for item in response["data"] if isinstance(item, dict)]
+                if measurements:
+                    measurement = max(measurements, key=lambda item: item.get("timestamp", ""))
         except RemoteSpringApiError as exc:
             logger.warning("Falha ao consultar endpoint %s: %s", list_endpoint_id, exc)
-            return None
 
-        if response["status_code"] != 200 or not isinstance(response["data"], list):
-            return None
-        if not response["data"]:
-            return None
+        if measurement is not None:
+            return measurement
 
-        measurements = [item for item in response["data"] if isinstance(item, dict)]
-        if not measurements:
-            return None
-
-        return max(measurements, key=lambda item: item.get("timestamp", ""))
+        if db_fallback is not None:
+            return db_fallback()
+        return None
 
     def _format_room_section(self, room: dict[str, Any]) -> str:
         pieces = [f"sala {room['nome']} (id={room['id']})"]

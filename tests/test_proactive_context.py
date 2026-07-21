@@ -5,6 +5,7 @@ Testes para o enriquecimento contextual de notificações proativas.
 from unittest.mock import AsyncMock
 
 from app.api import routes
+from app.services.integration_catalog import RemoteSpringApiError
 from app.services.persona_service import ProactiveMessageResult
 from app.services.proactive_context import ProactiveOperationalContextService
 
@@ -87,6 +88,64 @@ def test_operational_context_builds_summary_and_prompt():
     assert "temperature_c=24.7 C" in result.prompt_block
     assert "presence=sim" in result.prompt_block
     assert result.metadata["room"]["nome"] == "Elevador"
+
+
+class FakeDbServiceWithMeasurements(FakeDbService):
+    def fetch_latest_room_measurement(self, room_id):
+        assert room_id == "2"
+        return {
+            "id": "m2",
+            "sensorExternalId": "SII-001",
+            "compartimentoId": "2",
+            "timestamp": "2026-07-19T18:37:36+00:00",
+            "source": "postgresql",
+            "valores": {"temperature_c": 20.92, "presence": False},
+        }
+
+    def fetch_latest_sensor_measurement(self, sensor_external_id):
+        assert sensor_external_id == "SII-001"
+        return {
+            "id": "m2",
+            "sensorExternalId": "SII-001",
+            "compartimentoId": "2",
+            "timestamp": "2026-07-19T18:37:36+00:00",
+            "source": "postgresql",
+            "valores": {"humidity_pct": 74.3},
+        }
+
+
+class FailingSpringService:
+    def invoke_endpoint(self, endpoint_id, path_params=None, query_params=None, body=None):
+        if endpoint_id == "pessoas_get":
+            return {
+                "status_code": 200,
+                "data": {
+                    "id": "ravilon",
+                    "nome": "Ravilon A. Santos",
+                    "email": "ravilon@exemplo.com",
+                    "matricula": "MAT-001",
+                },
+            }
+        raise RemoteSpringApiError("API Spring indisponível")
+
+
+def test_operational_context_falls_back_to_postgres_when_spring_is_down():
+    service = ProactiveOperationalContextService(
+        spring_service=FailingSpringService(),
+        db_service=FakeDbServiceWithMeasurements(),
+    )
+
+    result = service.build_context(
+        room_id="2",
+        sensor_external_id="SII-001",
+        pessoa_id="ravilon",
+    )
+
+    assert "Sala Elevador" in result.summary
+    assert "temperature_c=20.92 C" in result.prompt_block
+    assert "humidity_pct=74.3%" in result.prompt_block
+    assert result.metadata["room_measurement"]["source"] == "postgresql"
+    assert result.metadata["sensor_measurement"]["source"] == "postgresql"
 
 
 def test_operational_context_returns_empty_when_no_ids():

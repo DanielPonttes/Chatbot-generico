@@ -20,10 +20,10 @@ O backend tambem expoe endpoints JSON para chat, saude, RAG, notificacoes salvas
 - Personas fixas: `provocador`, `motivador`, `debochado`.
 - Perfis-alvo: `gastao`, `indiferente`, `engajado`.
 - Tipos de notificacao configurados em `app/services/notification_type.yaml`.
-- Enriquecimento de notificacoes com contexto operacional real: sala, sensor, pessoa e medicoes.
+- Enriquecimento de notificacoes com contexto operacional real: sala, sensor, pessoa e medicoes (via API Spring Boot, com fallback direto no PostgreSQL remoto quando a API estiver indisponivel).
 - RAG com Chroma e embeddings do Gemini.
 - Persistencia de notificacoes em SQLite.
-- Catalogo de tabelas PostgreSQL remotas e endpoints Spring Boot.
+- Catalogo de tabelas PostgreSQL remotas e endpoints Spring Boot (com autenticacao JWT via `/api/auth/login`).
 - Testes de API com pytest e E2E com Playwright.
 - CI em GitHub Actions.
 
@@ -83,7 +83,9 @@ Variaveis principais:
 | `SQLITE_PATH` | Caminho do SQLite de conversas. |
 | `SQLITE_DB_PATH` | Caminho opcional do SQLite de notificacoes salvas. |
 | `REMOTE_PG_*` | Credenciais e limites do PostgreSQL remoto. |
-| `REMOTE_SPRING_BASE_URL` | URL base da API Spring Boot remota. |
+| `REMOTE_SPRING_BASE_URL` | URL base da API Spring Boot remota (ex: `https://procel.servehttp.com`). |
+| `REMOTE_SPRING_USERNAME` | E-mail de login da API Spring (`POST /api/auth/login`). |
+| `REMOTE_SPRING_PASSWORD` | Senha de login da API Spring. O JWT é cacheado e renovado automaticamente. |
 
 Exemplo minimo com Gemini:
 

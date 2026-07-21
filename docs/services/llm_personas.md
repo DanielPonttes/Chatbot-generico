@@ -95,6 +95,10 @@ Tipos atuais:
 - `social_desafio_cooperativo`
 - `conquista_badge`
 - `conquista_impacto_ambiental`
+- `missao_convite`
+- `missao_status`
+- `feedback_alerta_consumo`
+- `feedback_dica_contextual`
 
 ### Variaveis Dinamicas
 

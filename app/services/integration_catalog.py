@@ -8,8 +8,13 @@ Inclui:
 
 from __future__ import annotations
 
+import base64
+import json
 import logging
+import time
 from dataclasses import asdict, dataclass, field
+from datetime import datetime
+from decimal import Decimal
 from typing import Any
 
 import httpx
@@ -122,14 +127,14 @@ class SpringEndpointDefinition:
 
 SPRING_ENDPOINTS: tuple[SpringEndpointDefinition, ...] = (
     SpringEndpointDefinition(
-        id="setup_window_helper",
+        id="actuator_health",
         category="setup",
         method="GET",
-        path_template="Set fromIso/toIso (last 10 min...)",
-        description="Request helper observado no Postman para configurar a janela temporal dos testes.",
-        discovery_source="postman_screenshot",
-        relevance_score=55,
-        relevance_reason="Útil para testes manuais, mas não é um endpoint de domínio confirmado.",
+        path_template="/actuator/health",
+        description="Health check da API Spring Boot (helper de setup nos testes E2E).",
+        discovery_source="confirmed",
+        relevance_score=70,
+        relevance_reason="A API restringe este endpoint (retorna 401 mesmo com JWT ADMIN), então não é invocável na prática.",
         invoke_supported=False,
     ),
     SpringEndpointDefinition(
@@ -147,12 +152,11 @@ SPRING_ENDPOINTS: tuple[SpringEndpointDefinition, ...] = (
         id="sensors_seed_from_legacy",
         category="bootstrap",
         method="POST",
-        path_template="/api/sensors/seed/from-...",
-        description="Bootstrap de sensores a partir da base legada; visível no Postman, mas sem path completo confirmado.",
-        discovery_source="postman_screenshot",
+        path_template="/api/sensors/seed/from-resource",
+        description="Bootstrap de sensores a partir da base legada (seed from-resource).",
+        discovery_source="confirmed",
         relevance_score=84,
-        relevance_reason="Relevante para povoar sensores, mas ainda exige o path exato para automação.",
-        invoke_supported=False,
+        relevance_reason="Relevante para povoar sensores a partir do recurso legado.",
         side_effect=True,
     ),
     SpringEndpointDefinition(
@@ -221,23 +225,23 @@ SPRING_ENDPOINTS: tuple[SpringEndpointDefinition, ...] = (
         id="presencas_occupancy_observed",
         category="presencas",
         method="GET",
-        path_template="/api/presencas/ocupacao...",
-        description="Consulta de ocupação observada no Postman, mas sem o path completo visível.",
-        discovery_source="postman_screenshot",
+        path_template="/api/presencas/ocupacao/compartimentos/{room_id}",
+        description="Consulta a ocupação atual de um compartimento.",
+        discovery_source="confirmed",
         relevance_score=90,
-        relevance_reason="Muito relevante para inferir ocupação atual, porém precisa do path final para automação.",
-        invoke_supported=False,
+        relevance_reason="Muito relevante para inferir ocupação atual da sala.",
+        example_path_params={"room_id": "393"},
     ),
     SpringEndpointDefinition(
         id="presencas_open_observed",
         category="presencas",
         method="GET",
-        path_template="/api/presencas/abertas/...",
-        description="Consulta de presenças abertas observada no Postman, ainda sem path final confirmado.",
-        discovery_source="postman_screenshot",
+        path_template="/api/presencas/abertas/compartimentos/{room_id}",
+        description="Lista presenças em aberto de um compartimento.",
+        discovery_source="confirmed",
         relevance_score=90,
         relevance_reason="Muito relevante para monitorar ocupação em aberto.",
-        invoke_supported=False,
+        example_path_params={"room_id": "393"},
     ),
     SpringEndpointDefinition(
         id="sensors_ingest_mock",
@@ -310,13 +314,68 @@ SPRING_ENDPOINTS: tuple[SpringEndpointDefinition, ...] = (
         id="presencas_checkout_extra",
         category="presencas",
         method="POST",
-        path_template="/api/presencas/checkout...",
-        description="Segundo endpoint de checkout visível no Postman, mas sem o path completo disponível.",
-        discovery_source="postman_screenshot",
+        path_template="/api/presencas/checkout/by-pessoa",
+        description="Checkout de presença informando apenas a pessoa (fecha a presença aberta dela).",
+        discovery_source="confirmed",
         relevance_score=80,
-        relevance_reason="Provavelmente útil para operações em lote ou por sala, mas ainda sem confirmação.",
-        invoke_supported=False,
+        relevance_reason="Útil para checkout rápido sem precisar do presencaId.",
         side_effect=True,
+        example_body={"pessoaId": "ravilon"},
+    ),
+    SpringEndpointDefinition(
+        id="missoes_list",
+        category="missoes",
+        method="GET",
+        path_template="/api/missoes",
+        description="Lista missões de gamificação (filtro opcional por ativo).",
+        discovery_source="confirmed",
+        relevance_score=86,
+        relevance_reason="Base para notificações de engajamento e missões ativas do usuário.",
+        example_query_params={"ativo": "true"},
+    ),
+    SpringEndpointDefinition(
+        id="missoes_get",
+        category="missoes",
+        method="GET",
+        path_template="/api/missoes/{missao_id}",
+        description="Detalha uma missão específica.",
+        discovery_source="confirmed",
+        relevance_score=78,
+        relevance_reason="Permite detalhar regras da missão antes de mencioná-la em notificações.",
+    ),
+    SpringEndpointDefinition(
+        id="pessoas_atividades_list",
+        category="atividades",
+        method="GET",
+        path_template="/api/pessoas/{pessoa_id}/atividades",
+        description="Lista atividades (missões atribuídas) de uma pessoa, com filtro opcional por status.",
+        discovery_source="confirmed",
+        relevance_score=91,
+        relevance_reason="Mostra o andamento das missões do usuário, insumo direto para notificações personalizadas.",
+        example_path_params={"pessoa_id": "admin"},
+        example_query_params={"status": "PENDENTE"},
+    ),
+    SpringEndpointDefinition(
+        id="pessoas_atividades_resumo",
+        category="atividades",
+        method="GET",
+        path_template="/api/pessoas/{pessoa_id}/atividades/resumo",
+        description="Resumo das atividades de uma pessoa (contadores por status).",
+        discovery_source="confirmed",
+        relevance_score=89,
+        relevance_reason="Resumo compacto ideal para contextualizar notificações de engajamento.",
+        example_path_params={"pessoa_id": "admin"},
+    ),
+    SpringEndpointDefinition(
+        id="rules_parameter_defs",
+        category="rules",
+        method="GET",
+        path_template="/api/rules/parameter-defs",
+        description="Lista definições de parâmetros disponíveis para regras (filtro opcional por tipo de sensor).",
+        discovery_source="confirmed",
+        relevance_score=74,
+        relevance_reason="Ajuda a descobrir quais métricas podem ser usadas em regras e notificações.",
+        example_query_params={"tipoNome": "SII_SMART"},
     ),
 )
 
@@ -631,6 +690,88 @@ class RemotePostgresCatalogService:
             cursor.execute(query, (pessoa_id,))
             return cursor.fetchone()
 
+    def fetch_latest_sensor_measurement(self, sensor_external_id: str) -> dict[str, Any] | None:
+        """Última medição de um sensor, no formato usado pelo contexto proativo."""
+        return self._fetch_latest_measurement(
+            """
+                select m2.id
+                from public.medicao m2
+                where m2.sensor_external_id = %s
+                order by m2.timestamp desc
+                limit 1
+            """,
+            sensor_external_id,
+        )
+
+    def fetch_latest_room_measurement(self, room_id: str) -> dict[str, Any] | None:
+        """Última medição registrada entre os sensores de um compartimento."""
+        return self._fetch_latest_measurement(
+            """
+                select m2.id
+                from public.medicao m2
+                join public.sensor s2 on s2.external_id = m2.sensor_external_id
+                where s2.compartimento_id = %s
+                order by m2.timestamp desc
+                limit 1
+            """,
+            room_id,
+        )
+
+    def _fetch_latest_measurement(
+        self,
+        latest_id_query: str,
+        param: str,
+    ) -> dict[str, Any] | None:
+        """Monta o payload de medição (mesmo formato da API Spring) a partir do PostgreSQL."""
+        query = f"""
+            select
+                m.id,
+                m.timestamp,
+                m.source,
+                m.sensor_external_id,
+                s.compartimento_id,
+                pd.nome as metric,
+                pv.numeric_value,
+                pv.boolean_value,
+                pv.text_value
+            from public.medicao m
+            join public.parametro_valor pv on pv.medicao_id = m.id
+            join public.parametro_def pd on pd.id = pv.parametro_def_id
+            left join public.sensor s on s.external_id = m.sensor_external_id
+            where m.id = ({latest_id_query})
+        """
+
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(query, (param,))
+            rows = cursor.fetchall()
+
+        if not rows:
+            return None
+
+        valores: dict[str, Any] = {}
+        for row in rows:
+            value = row["numeric_value"]
+            if value is None:
+                value = row["boolean_value"]
+            if value is None:
+                value = row["text_value"]
+            if isinstance(value, Decimal):
+                value = float(value)
+            valores[row["metric"]] = value
+
+        first = rows[0]
+        timestamp = first["timestamp"]
+        return {
+            "id": str(first["id"]),
+            "timestamp": (
+                timestamp.isoformat() if isinstance(timestamp, datetime) else str(timestamp)
+            ),
+            "source": first["source"] or "postgresql",
+            "sensorExternalId": first["sensor_external_id"],
+            "compartimentoId": first["compartimento_id"],
+            "valores": valores,
+        }
+
     def search_rooms(self, query_text: str = "", limit: int = 20) -> list[dict[str, Any]]:
         pattern = f"%{query_text.strip()}%"
         query = """
@@ -810,12 +951,70 @@ class SpringApiCatalogService:
 
     def __init__(self) -> None:
         self._endpoints = {endpoint.id: endpoint for endpoint in SPRING_ENDPOINTS}
+        self._token: str | None = None
+        self._token_expires_at: float = 0.0
 
     def get_connection_info(self) -> dict[str, Any]:
         return {
             "base_url": settings.remote_spring_base_url.rstrip("/"),
             "timeout_seconds": settings.remote_spring_timeout_seconds,
+            "auth_configured": self._auth_enabled(),
         }
+
+    def _auth_enabled(self) -> bool:
+        return bool(settings.remote_spring_username and settings.remote_spring_password)
+
+    @staticmethod
+    def _decode_token_expiry(token: str) -> float:
+        """Extrai o exp do JWT (sem validar assinatura) com margem de segurança."""
+        try:
+            payload = token.split(".")[1]
+            padded = payload + "=" * (-len(payload) % 4)
+            data = json.loads(base64.urlsafe_b64decode(padded))
+            return float(data.get("exp", 0)) - 60
+        except Exception:
+            return time.time() + 300
+
+    def _login(self) -> str:
+        """Autentica em /api/auth/login e cacheia o accessToken JWT."""
+        url = f"{settings.remote_spring_base_url.rstrip('/')}/api/auth/login"
+        timeout = httpx.Timeout(settings.remote_spring_timeout_seconds)
+        credentials = {
+            "email": settings.remote_spring_username,
+            "password": settings.remote_spring_password,
+        }
+
+        try:
+            with httpx.Client(timeout=timeout) as client:
+                response = client.post(url, json=credentials)
+        except Exception as exc:
+            raise RemoteSpringApiError(
+                f"Falha ao autenticar na API Spring Boot: {exc}"
+            ) from exc
+
+        if response.status_code != 200:
+            raise RemoteSpringApiError(
+                f"Login na API Spring Boot recusado (status {response.status_code}). "
+                "Verifique REMOTE_SPRING_USERNAME e REMOTE_SPRING_PASSWORD."
+            )
+
+        try:
+            token = response.json().get("accessToken")
+        except ValueError:
+            token = None
+        if not token:
+            raise RemoteSpringApiError(
+                "API Spring Boot não retornou accessToken no login."
+            )
+
+        self._token = token
+        self._token_expires_at = self._decode_token_expiry(token)
+        return token
+
+    def _get_token(self, force_refresh: bool = False) -> str:
+        if force_refresh or not self._token or time.time() >= self._token_expires_at:
+            return self._login()
+        return self._token
 
     def list_endpoints(self) -> list[dict[str, Any]]:
         endpoints = [asdict(endpoint) for endpoint in self._endpoints.values()]
@@ -851,6 +1050,10 @@ class SpringApiCatalogService:
         url = f"{settings.remote_spring_base_url.rstrip('/')}{path}"
         timeout = httpx.Timeout(settings.remote_spring_timeout_seconds)
 
+        headers: dict[str, str] = {}
+        if self._auth_enabled():
+            headers["Authorization"] = f"Bearer {self._get_token()}"
+
         try:
             with httpx.Client(timeout=timeout) as client:
                 response = client.request(
@@ -858,7 +1061,17 @@ class SpringApiCatalogService:
                     url,
                     params=query_params or None,
                     json=body,
+                    headers=headers or None,
                 )
+                if response.status_code == 401 and self._auth_enabled():
+                    headers["Authorization"] = f"Bearer {self._get_token(force_refresh=True)}"
+                    response = client.request(
+                        endpoint.method,
+                        url,
+                        params=query_params or None,
+                        json=body,
+                        headers=headers,
+                    )
         except Exception as exc:
             raise RemoteSpringApiError(
                 f"Falha ao invocar o endpoint remoto '{endpoint_id}': {exc}"

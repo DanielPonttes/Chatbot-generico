@@ -2,7 +2,12 @@
 Testes para os endpoints de integração externa.
 """
 
+from types import SimpleNamespace
+
+import pytest
+
 from app.api import routes
+from app.core.config import settings
 
 
 class FakeRemoteDatabaseService:
@@ -300,3 +305,112 @@ def test_invoke_spring_endpoint(client, monkeypatch):
     data = response.json()
     assert data["status_code"] == 200
     assert data["data"]["sensorExternalId"] == "SII-001"
+
+
+# ---------------------------------------------------------------------------
+# Autenticação JWT da API Spring Boot
+# ---------------------------------------------------------------------------
+
+
+def _make_jwt(expires_in: int = 3600) -> str:
+    import base64
+    import json as jsonlib
+    import time as timelib
+
+    payload = {"sub": "admin", "exp": int(timelib.time()) + expires_in}
+    encoded = base64.urlsafe_b64encode(jsonlib.dumps(payload).encode()).decode().rstrip("=")
+    return f"header.{encoded}.signature"
+
+
+class FakeHttpxResponse:
+    def __init__(self, status_code, payload):
+        self.status_code = status_code
+        self._payload = payload
+        self.headers = {"content-type": "application/json"}
+        self.request = SimpleNamespace(url="https://procel.test/fake")
+
+    def json(self):
+        return self._payload
+
+    @property
+    def text(self):
+        import json as jsonlib
+
+        return jsonlib.dumps(self._payload)
+
+
+class FakeHttpxClient:
+    """Simula o httpx.Client: login em /api/auth/login e chamadas com Bearer."""
+
+    login_calls: list = []
+    api_calls: list = []
+    fail_first_with_401: bool = False
+
+    def __init__(self, timeout=None):
+        self.timeout = timeout
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    def post(self, url, json=None):
+        assert url.endswith("/api/auth/login")
+        assert json == {"email": "admin@procel.local", "password": "admin123"}
+        FakeHttpxClient.login_calls.append(url)
+        return FakeHttpxResponse(200, {"accessToken": _make_jwt(), "tokenType": "Bearer"})
+
+    def request(self, method, url, params=None, json=None, headers=None):
+        FakeHttpxClient.api_calls.append({"method": method, "url": url, "headers": headers})
+        if FakeHttpxClient.fail_first_with_401 and len(FakeHttpxClient.api_calls) == 1:
+            return FakeHttpxResponse(401, {"error": "unauthorized"})
+        return FakeHttpxResponse(200, {"sensorExternalId": "SII-002"})
+
+
+@pytest.fixture
+def spring_service_with_auth(monkeypatch):
+    from app.services import integration_catalog
+    from app.services.integration_catalog import SpringApiCatalogService
+
+    FakeHttpxClient.login_calls = []
+    FakeHttpxClient.api_calls = []
+    FakeHttpxClient.fail_first_with_401 = False
+
+    monkeypatch.setattr(integration_catalog.httpx, "Client", FakeHttpxClient)
+    monkeypatch.setattr(settings, "remote_spring_base_url", "https://procel.test")
+    monkeypatch.setattr(settings, "remote_spring_username", "admin@procel.local")
+    monkeypatch.setattr(settings, "remote_spring_password", "admin123")
+
+    return SpringApiCatalogService()
+
+
+def test_spring_invoke_authenticates_and_caches_token(spring_service_with_auth):
+    service = spring_service_with_auth
+
+    first = service.invoke_endpoint(
+        "sensor_measurements_latest", path_params={"sensor_external_id": "SII-002"}
+    )
+    second = service.invoke_endpoint(
+        "sensor_measurements_latest", path_params={"sensor_external_id": "SII-002"}
+    )
+
+    assert first["status_code"] == 200
+    assert second["status_code"] == 200
+    assert len(FakeHttpxClient.login_calls) == 1
+    assert len(FakeHttpxClient.api_calls) == 2
+    for call in FakeHttpxClient.api_calls:
+        assert call["headers"]["Authorization"].startswith("Bearer ")
+
+
+def test_spring_invoke_refreshes_token_on_401(spring_service_with_auth):
+    FakeHttpxClient.fail_first_with_401 = True
+    service = spring_service_with_auth
+
+    result = service.invoke_endpoint(
+        "sensor_measurements_latest", path_params={"sensor_external_id": "SII-002"}
+    )
+
+    assert result["status_code"] == 200
+    assert len(FakeHttpxClient.api_calls) == 2
+    assert len(FakeHttpxClient.login_calls) == 2

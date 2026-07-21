@@ -452,9 +452,27 @@ app/
 
     rag.html
 
-docs/
+scripts/
+
+  benchmark_local_models.py # Compara modelos locais (cold, latencia, tok/s, concorrencia)
+
+  benchmark_prompts.json    # Prompts representativos para o benchmark
 
 tests/
+
+docs/
+
+  analysis/        # Cruzamentos e analises (ex: missoes spec vs API)
+
+  backend/         # Referencia da API
+
+  benchmarks/      # Guia de benchmark de modelos locais
+
+  frontend/        # Telas HTML
+
+  services/        # Personas, LLM e notificacoes
+
+  setup/           # Instalacao, Ollama remoto, comparativo de runtimes
 
 ```
 
@@ -570,4 +588,6 @@ Para detalhes de protecao de branch, veja `docs/setup/ci.md`.
 - O banco SQLite e os dados locais ficam em `data/`, que e ignorado pelo git.
 
 - O RAG depende de chave Google para embeddings.
+
+- Para comparar modelos locais (latencia, throughput, custo), use `scripts/benchmark_local_models.py` (veja `docs/benchmarks/local_models.md`).
 

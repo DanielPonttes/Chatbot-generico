@@ -537,6 +537,7 @@ Para detalhes de protecao de branch, veja `docs/setup/ci.md`.
 - `docs/setup/installation.md`: instalacao e execucao.
 - `docs/setup/ollama_remote.md`: Ollama em outra máquina (GPU dedicada) via rede ou tunel SSH.
 - `docs/setup/llm_runtimes.md`: comparativo Ollama vs llama.cpp vs vLLM vs LM Studio.
+- `docs/benchmarks/local_models.md`: como medir e comparar Qwen3.5-4B vs Gemma 4 E4B.
 - `docs/backend/api.md`: referencia de API.
 - `docs/frontend/interfaces.md`: telas HTML.
 

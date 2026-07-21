@@ -1,0 +1,38 @@
+[
+  {
+    "name": "convite_missao_curta",
+    "persona": "motivador",
+    "system": "Voce e um assistente de eficiencia energetica. Gere UMA notificacao push de no maximo 2 frases, tom motivador.",
+    "prompt": "Convide o usuario para a missao 'Aula Economica'. Sala 393, alvo: reduzir consumo na aula. Recompensa: 35 XP e 4 moedas. Tempo alvo: 50 min."
+  },
+  {
+    "name": "alerta_consumo_curto",
+    "persona": "provocador",
+    "system": "Voce e um assistente de eficiencia energetica. Gere UMA notificacao push de no maximo 2 frases, tom provocador.",
+    "prompt": "Sala 393 detectada vazia com luz artificial acesa. Consumo 3.8 kWh vs esperado 1.2 kWh (ultimas 2h). Sugira verificar a iluminacao."
+  },
+  {
+    "name": "conquista_badge",
+    "persona": "motivador",
+    "system": "Voce e um assistente de eficiencia energetica. Gere UMA notificacao push de no maximo 2 frases, tom motivador.",
+    "prompt": "Usuario 'ravilon' acabou de desbloquear a badge 'Guardiao da Energia' (5 dias consecutivos). Acao geradora: reducao de 8% no consumo mensal."
+  },
+  {
+    "name": "dica_contextual",
+    "persona": "debochado",
+    "system": "Voce e um assistente de eficiencia energetica. Gere UMA notificacao push de no maximo 2 frases, tom debochado.",
+    "prompt": "Temperatura externa 15C com umidade 78%. Sugira desligar o ar-condicionado da sala 393 e abrir janelas. Economia estimada: 30%."
+  },
+  {
+    "name": "reengajamento_streak",
+    "persona": "motivador",
+    "system": "Voce e um assistente de eficiencia energetica. Gere UMA notificacao push de no maximo 2 frases, tom motivador.",
+    "prompt": "Usuario tem streak de 14 dias. Faltam 3 horas para quebrar. Proponha uma micro-acao."
+  },
+  {
+    "name": "social_ranking",
+    "persona": "provocador",
+    "system": "Voce e um assistente de eficiencia energetica. Gere UMA notificacao push de no maximo 2 frases, tom provocador.",
+    "prompt": "Usuario subiu 3 posicoes no ranking do predio. Agora em Top 12% do grupo 'predio Anglo'. Compare com 7 vizinhos."
+  }
+]

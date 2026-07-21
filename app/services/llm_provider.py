@@ -87,7 +87,7 @@ class OllamaProvider(LLMProvider):
     Instalação: https://ollama.ai/
     
     Modelos recomendados (leves):
-    - gemma4:e4b     (Gemma 4 E4B, ~3.3GB, melhor qualidade ate 8B)
+    - qwen3.5:4b     (Qwen3.5-4B, ~3.3GB, melhor qualidade ate 8B)
     - qwen2.5:7b    (~4.7GB, excelente em PT-BR)
     - llama3.1:8b   (~4.9GB, generalista muito capaz)
     - qwen2.5:0.5b  (~400MB, mais leve)

@@ -21,17 +21,17 @@ Tags uteis (escolha uma):
 
 | Tag                       | Tamanho | Contexto | Observacao                                                |
 |---------------------------|---------|----------|-----------------------------------------------------------|
-| gemma4:e4b                | 9.6 GB  | 128k     | **Gemma 4 E4B** (4.5B effective + PLE) - recomendado      |
-| gemma4:e4b-it-qat         | 6.1 GB  | 128k     | Gemma 4 E4B quantizado QAT - mais leve                   |
-| gemma4:e4b-it-q8_0        | 12 GB   | 128k     | Gemma 4 E4B q8 - mais qualidade, mais VRAM                |
-| qwen2.5:7b                | 4.7 GB  | 32k      | Otimo em PT-BR, mais leve que o Gemma 4                  |
+| qwen3.5:4b                | 3.4 GB  | 256k     | **Qwen3.5-4B** - recomendado oficial pelos autores       |
+| qwen3.5:4b-q8_0           | 5.3 GB  | 256k     | Qwen3.5-4B em q8 - mais qualidade, mais VRAM              |
+| gemma4:e4b                | 9.6 GB  | 128k     | Gemma 4 E4B (4.5B effective) - alternativa multimodal     |
+| gemma4:e4b-it-qat         | 6.1 GB  | 128k     | Gemma 4 E4B QAT - mais leve                              |
 | llama3.1:8b               | 4.9 GB  | 128k     | Generalista muito capaz                                   |
 
-Exemplo com Gemma 4 E4B:
+Exemplo com Qwen3.5-4B:
 
 ```bash
-ollama pull gemma4:e4b
-ollama run gemma4:e4b "ola, voce funciona?"   # teste rapido
+ollama pull qwen3.5:4b
+ollama run qwen3.5:4b "ola, voce funciona?"   # teste rapido
 ```
 
 ## 3. Liberar o acesso na rede (firewall / bind)
@@ -62,7 +62,7 @@ Na maquina onde o chatbot roda, edite o `.env`:
 ```env
 LLM_PROVIDER=ollama
 OLLAMA_BASE_URL=http://IP_DA_MAQUINA_OLLAMA:11434
-OLLAMA_MODEL=gemma4:e4b
+OLLAMA_MODEL=qwen3.5:4b
 ```
 
 Para evitar expor o Ollama na internet, mantenha as duas maquinas na mesma rede privada/VPN.
@@ -89,9 +89,9 @@ O campo `provider` deve ser `ollama` e `provider_available` deve ser `true`. Em 
 
 - Conexao recusada: firewall bloqueando ou Ollama nao subiu
 - Timeout: maquina do chatbot nao alcança a URL configurada
-- Modelo nao encontrado: rode `ollama pull gemma4:e4b` na maquina remota
+- Modelo nao encontrado: rode `ollama pull qwen3.5:4b` na maquina remota
 
-## 7. Estimativa de vazao (Gemma 4 E4B em RTX 5090)
+## 7. Estimativa de vazao (Qwen3.5-4B em RTX 5090)
 
 | Carga                                    | Tempo estimado |
 |------------------------------------------|----------------|
@@ -99,4 +99,8 @@ O campo `provider` deve ser `ollama` e `provider_available` deve ser `true`. Em 
 | 10 notificacoes em sequencia             | 5-10 s         |
 | 10 notificacoes em paralelo (workers)    | 1-2 s          |
 
-A RTX 5090 entrega tipicamente 150+ tokens/s para modelos 4B-effective em quantizacao q4_K_M, sobrando bastante folga para 10+ notificacoes/min. O gargalo geralmente e a concorrencia de chamadas no Ollama, nao o modelo. Ajuste `OLLAMA_NUM_PARALLEL` (padrao 1) se precisar de mais concorrencia, e `RATE_LIMIT_PER_MINUTE` no `.env` do chatbot se for servir varios clientes.
+A RTX 5090 entrega tipicamente 200+ tokens/s para modelos 4B em quantizacao q4_K_M, sobrando bastante folga para 10+ notificacoes/min. O gargalo geralmente e a concorrencia de chamadas no Ollama, nao o modelo. Ajuste `OLLAMA_NUM_PARALLEL` (padrao 1) se precisar de mais concorrencia, e `RATE_LIMIT_PER_MINUTE` no `.env` do chatbot se for servir varios clientes.
+
+## 8. Escolhendo o runtime (Ollama vs llama.cpp vs vLLM vs LM Studio)
+
+Ollama e a opcao recomendada para este projeto (ja integrado, instalacao em 1 comando, `qwen3.5:4b` no catalogo). Para uma comparacao completa, vantagens e quando migrar, veja [`llm_runtimes.md`](llm_runtimes.md).

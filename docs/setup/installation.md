@@ -141,7 +141,7 @@ Instale e rode:
 
 ollama serve
 
-ollama pull gemma4:e4b
+ollama pull qwen3.5:4b
 
 ```
 
@@ -157,7 +157,7 @@ LLM_PROVIDER=ollama
 
 OLLAMA_BASE_URL=http://localhost:11434
 
-OLLAMA_MODEL=gemma4:e4b
+OLLAMA_MODEL=qwen3.5:4b
 
 ```
 

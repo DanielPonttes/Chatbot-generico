@@ -151,7 +151,7 @@ Variaveis principais:
 | `GEMINI_MODEL` | Modelo Gemini padrao, como `gemini-3-flash-preview`. |
 
 | `OLLAMA_BASE_URL` | URL do Ollama (local ou remoto). Veja `docs/setup/ollama_remote.md` se for em outra máquina. |
-| `OLLAMA_MODEL` | Modelo local, como `gemma4:e4b` (Gemma 4 E4B) ou `qwen2.5:0.5b` (mais leve). |
+| `OLLAMA_MODEL` | Modelo local, como `qwen3.5:4b` (Qwen3.5-4B) ou `qwen2.5:0.5b` (mais leve). |
 | `HF_TOKEN` | Token HuggingFace. |
 
 | `HF_MODEL` | Modelo HuggingFace. |
@@ -200,7 +200,7 @@ LLM_PROVIDER=ollama
 
 OLLAMA_BASE_URL=http://localhost:11434
 
-OLLAMA_MODEL=gemma4:e4b
+OLLAMA_MODEL=qwen3.5:4b
 
 ```
 
@@ -536,6 +536,7 @@ Para detalhes de protecao de branch, veja `docs/setup/ci.md`.
 
 - `docs/setup/installation.md`: instalacao e execucao.
 - `docs/setup/ollama_remote.md`: Ollama em outra máquina (GPU dedicada) via rede ou tunel SSH.
+- `docs/setup/llm_runtimes.md`: comparativo Ollama vs llama.cpp vs vLLM vs LM Studio.
 - `docs/backend/api.md`: referencia de API.
 - `docs/frontend/interfaces.md`: telas HTML.
 

@@ -199,6 +199,10 @@ class HealthResponse(BaseModel):
         default=None,
         description="Mensagem adicional (ex: erro de conexão)",
     )
+    components: dict[str, str] | None = Field(
+        default=None,
+        description="Estado dos componentes externos (banco remoto, API Spring)",
+    )
 
 
 class RemoteDatabaseConnectionResponse(BaseModel):

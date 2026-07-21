@@ -12,6 +12,8 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
+import httpx
+
 from fastapi import APIRouter, HTTPException, Query, status
 
 from app.core.config import settings
@@ -259,13 +261,39 @@ async def chat_proactive(request: ProactiveChatRequest) -> ChatResponse:
 # Health
 # ---------------------------------------------------------------------------
 
+def _probe_external_components() -> dict[str, str]:
+    """
+    Verifica rapidamente os componentes externos (PostgreSQL e API Spring).
+    Nunca levanta exceção — falhas viram strings de status no health.
+    """
+    components: dict[str, str] = {}
+
+    try:
+        db_health = get_remote_postgres_catalog_service().health()
+        components["database"] = f"connected ({db_health['database_name']})"
+    except Exception as exc:
+        components["database"] = f"unavailable: {exc}"
+
+    try:
+        spring_info = get_spring_api_catalog_service().get_connection_info()
+        probe_timeout = min(3.0, float(spring_info["timeout_seconds"]))
+        with httpx.Client(timeout=httpx.Timeout(probe_timeout)) as client:
+            response = client.get(f"{spring_info['base_url']}/actuator/health")
+        components["spring_api"] = f"reachable (HTTP {response.status_code})"
+    except Exception as exc:
+        components["spring_api"] = f"unreachable: {exc}"
+
+    return components
+
+
 @router.get(
     "/health",
     response_model=HealthResponse,
     summary="Verificar status da aplicação",
-    description="Retorna o status da aplicação e se o provider LLM está disponível.",
+    description="Retorna o status da aplicação, do provider LLM e dos componentes externos.",
 )
 async def health() -> HealthResponse:
+    components = _probe_external_components()
     try:
         provider = get_llm_provider()
         is_available = await provider.is_available()
@@ -277,6 +305,7 @@ async def health() -> HealthResponse:
                 model=provider.model,
                 provider_available=True,
                 message=None,
+                components=components,
             )
         else:
             return HealthResponse(
@@ -285,6 +314,7 @@ async def health() -> HealthResponse:
                 model=provider.model,
                 provider_available=False,
                 message="Provider offline ou sem resposta.",
+                components=components,
             )
 
     except ValueError as e:
@@ -294,6 +324,7 @@ async def health() -> HealthResponse:
             model=settings.ollama_model if settings.llm_provider == "ollama" else settings.hf_model,
             provider_available=False,
             message=str(e),
+            components=components,
         )
 
     except Exception as e:
@@ -304,6 +335,7 @@ async def health() -> HealthResponse:
             model="unknown",
             provider_available=False,
             message=f"Erro ao verificar status: {e}",
+            components=components,
         )
 
 

@@ -85,7 +85,10 @@ Variaveis principais:
 | `REMOTE_PG_*` | Credenciais e limites do PostgreSQL remoto. |
 | `REMOTE_SPRING_BASE_URL` | URL base da API Spring Boot remota (ex: `https://procel.servehttp.com`). |
 | `REMOTE_SPRING_USERNAME` | E-mail de login da API Spring (`POST /api/auth/login`). |
-| `REMOTE_SPRING_PASSWORD` | Senha de login da API Spring. O JWT é cacheado e renovado automaticamente. |
+| `REMOTE_SPRING_PASSWORD` | Senha de login da API Spring. O JWT é cacheado e renovado automaticamente. |
+| `API_KEY` | Chave de acesso da API (header `X-API-Key`). Vazia = aberta (dev). |
+| `CORS_ALLOW_ORIGINS` | Origens CORS separadas por virgula. `*` libera tudo (dev). |
+| `RATE_LIMIT_PER_MINUTE` | Limite de requisicoes/min por IP. `0` desativa. |
 
 Exemplo minimo com Gemini:
 
@@ -274,8 +277,12 @@ Para detalhes de protecao de branch, veja `docs/setup/ci.md`.
 
 ## Observacoes de Producao
 
-- A API ainda nao possui autenticacao.
-- CORS esta aberto para facilitar desenvolvimento.
+- Autenticacao opcional por API key: defina `API_KEY` e os endpoints passam a exigir o header `X-API-Key` (exceto `/health` e docs, publicos para monitoramento).
+- CORS configuravel via `CORS_ALLOW_ORIGINS` (padrao `*`; restrinja em producao).
+- Rate limit por IP via `RATE_LIMIT_PER_MINUTE` (contador em memoria, por worker).
+- Rotas versionadas sob `/v1` (ex: `/v1/chat`, `/v1/health`). Caminhos legados sem prefixo seguem ativos, ocultos do OpenAPI, e serao deprecados.
+- O `/health` reporta o estado dos componentes externos (PostgreSQL e API Spring) no campo `components`.
+- Erros inesperados retornam envelope padrao `{"detail": {"error": "internal_error", "message": ...}}`.
 - Dados sensiveis devem ficar em `.env`, nunca versionados.
 - O banco SQLite e os dados locais ficam em `data/`, que e ignorado pelo git.
 - O RAG depende de chave Google para embeddings.

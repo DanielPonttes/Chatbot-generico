@@ -100,6 +100,27 @@ class Settings(BaseSettings):
     """Modo debug - ativa logs mais detalhados."""
 
     # ==========================================
+    # API Pública
+    # ==========================================
+    api_key: str | None = None
+    """
+    Chave de acesso da API (header X-API-Key).
+    Se None (padrão), a autenticação fica desabilitada (modo desenvolvimento).
+    """
+
+    cors_allow_origins: str = "*"
+    """
+    Origens permitidas no CORS, separadas por vírgula.
+    "*" (padrão) libera qualquer origem — restrinja em produção.
+    """
+
+    rate_limit_per_minute: int = 0
+    """
+    Limite de requisições por minuto por IP. 0 (padrão) desativa.
+    Observação: o contador é em memória, por processo/worker.
+    """
+
+    # ==========================================
     # Integrações Externas - PostgreSQL Remoto
     # ==========================================
     remote_pg_host: str = "srv1428963.hstgr.cloud"

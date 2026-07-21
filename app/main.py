@@ -10,12 +10,13 @@ from contextlib import asynccontextmanager
 
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from app.core.config import settings
+from app.core.security import RateLimitMiddleware, verify_api_key
 
 # Diretório de arquivos estáticos
 STATIC_DIR = Path(__file__).parent / "static"
@@ -102,22 +103,53 @@ app = FastAPI(
 )
 
 # ==========================================
+# Tratamento global de erros
+# ==========================================
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Padroniza erros inesperados no mesmo envelope dos HTTPException da API."""
+    logger.exception("Erro não tratado em %s %s: %s", request.method, request.url.path, exc)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": {
+                "error": "internal_error",
+                "message": "Erro interno inesperado. Consulte os logs da aplicação.",
+            }
+        },
+    )
+
+
+# ==========================================
 # Middleware
 # ==========================================
-# CORS - permite requisições de qualquer origem (ajuste em produção)
+# CORS - origens configuráveis via CORS_ALLOW_ORIGINS ("*" libera tudo, modo dev)
+def _parse_cors_origins(value: str) -> list[str]:
+    """Converte a lista separada por vírgula em lista de origens ("*" se vazia)."""
+    origins = [origin.strip() for origin in value.split(",") if origin.strip()]
+    return origins or ["*"]
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Em produção, especifique as origens permitidas
+    allow_origins=_parse_cors_origins(settings.cors_allow_origins),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Rate limit por IP (ativo apenas quando RATE_LIMIT_PER_MINUTE > 0)
+app.add_middleware(RateLimitMiddleware)
+
 
 # ==========================================
 # Rotas
 # ==========================================
-app.include_router(router, tags=["chat"])
+# Versão atual (v1) — caminho recomendado para consumo público
+app.include_router(router, prefix="/v1", tags=["chat"], dependencies=[Depends(verify_api_key)])
+
+# Caminhos legados sem prefixo — mantidos por compatibilidade, ocultos do schema (deprecar futuramente)
+app.include_router(router, tags=["chat"], dependencies=[Depends(verify_api_key)], include_in_schema=False)
 
 # ==========================================
 # Rota raiz (serve a interface de testes)

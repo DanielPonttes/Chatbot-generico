@@ -105,7 +105,7 @@ test.describe('Notifications UI', () => {
 
     await expect.poll(() => captures.savedPosts.length).toBe(1);
     expect(captures.savedPosts[0]).toMatchObject({
-      type: 'like',
+      type: 'Aprovada',
       content: 'Mensagem ajustada para gastao.',
       persona: 'Persona Customizada',
       model: 'gemini-3-pro-preview',

@@ -36,11 +36,13 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     """URL base do servidor Ollama local."""
     
-    ollama_model: str = "qwen2.5:0.5b"
+    ollama_model: str = "gemma4:e4b"
     """
-    Modelo Ollama a usar. Opções recomendadas (leves):
-    - qwen2.5:0.5b  (500M params, ~400MB) - PADRÃO
-    - qwen2.5:1.5b  (1.5B params, ~1GB)
+    Modelo Ollama a usar. Opções recomendadas:
+    - gemma4:e4b     (Gemma 4 E4B, 4B params, ~3.3GB) - PADRÃO - melhor qualidade ate 8B
+    - qwen2.5:7b    (7B params, ~4.7GB) - excelente em PT-BR
+    - llama3.1:8b   (8B params, ~4.9GB) - generalista muito capaz
+    - qwen2.5:0.5b  (500M params, ~400MB) - ultra-leve
     - llama3.2:1b   (1B params, ~700MB)
     - phi3:mini     (3.8B params, ~2GB)
     """

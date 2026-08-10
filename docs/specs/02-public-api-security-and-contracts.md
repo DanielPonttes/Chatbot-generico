@@ -140,8 +140,10 @@ O deploy atrás de Caddy/Tunnel deve preencher `TRUSTED_PROXY_NETWORKS` com a
 rede real do gateway. O valor padrão vazio não aceita `X-Forwarded-For` nem
 `X-Forwarded-Proto`, evitando falsificação de identidade por clientes diretos.
 
-O `deploy/procelbot` é uma stack separada que expõe apenas o Ollama atrás de
-Basic Auth e bloqueia a API administrativa de modelos; ele não substitui o
+O `deploy/procelbot` mantém a stack do Ollama atrás de Basic Auth e bloqueia a
+API administrativa de modelos. O backend FastAPI é uma stack separada que
+reutiliza a rede Docker interna; o Caddy roteia `api.procel-chatbot.com` para o
+FastAPI e `ollama.procel-chatbot.com` para o Ollama. O Ollama não substitui o
 gateway FastAPI nem deve receber o tráfego da API `/v1`.
 
 ## 7. Critérios de aceite

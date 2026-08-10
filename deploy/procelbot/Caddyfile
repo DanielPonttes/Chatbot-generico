@@ -37,3 +37,46 @@ http://{$PROCELBOT_DOMAIN} {
         format json
     }
 }
+
+# API pública do chatbot. O FastAPI permanece sem porta publicada no host e
+# recebe tráfego somente pela rede Docker interna.
+http://api.procel-chatbot.com {
+    encode zstd gzip
+
+    request_body {
+        max_size 2MB
+    }
+
+    header {
+        -Server
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        Cache-Control "no-store"
+    }
+
+    @unsafe_methods method TRACE CONNECT
+    respond @unsafe_methods 405
+
+    # Swagger/ReDoc exigem uma segunda camada de acesso. O header da API é
+    # injetado apenas nessa rota para a UI conseguir carregar o OpenAPI.
+    @docs path /docs* /redoc*
+    handle @docs {
+        basic_auth {
+            procelbot {$PROCELBOT_BASIC_AUTH_HASH}
+        }
+        reverse_proxy chatbot:8000 {
+            header_up X-API-Key {$PROCELBOT_API_KEY}
+        }
+    }
+
+    handle {
+        reverse_proxy chatbot:8000
+    }
+
+    log {
+        output stdout
+        format json
+    }
+}

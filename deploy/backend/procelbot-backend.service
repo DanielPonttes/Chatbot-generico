@@ -1,0 +1,15 @@
+[Unit]
+Description=Procelbot FastAPI backend
+Requires=docker.service
+After=docker.service network-online.target procelbot-stack.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/procelbot-backend/deploy/backend
+ExecStart=/usr/bin/docker compose --project-name procelbot-backend -f /opt/procelbot-backend/deploy/backend/compose.yaml up -d --build
+ExecStop=/usr/bin/docker compose --project-name procelbot-backend -f /opt/procelbot-backend/deploy/backend/compose.yaml stop
+RemainAfterExit=yes
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

@@ -6,24 +6,33 @@ __pycache__/
 .Python
 
 # Ambientes virtuais
-env/
-venv/
 .venv/
+venv/
+env/
 
-# Variáveis de ambiente locais
+# Variáveis de ambiente locais e segredos
 .env
 .env.*
+!.env.example
 
-# Banco de dados e dados locais (para não ir na imagem, usaremos volume no compose)
+# Banco de dados e dados locais
 data/
+**/data/
+*.db
 
-# Git
+# Git e arquivos que não são necessários no runtime
 .git/
 .gitignore
-
-# Outros
 docs/
 prototypes/
 tests/
 implementation_plan.md
 README.md
+node_modules/
+playwright-report/
+test-results/
+
+# Segredos, revisão e logs
+**/secrets/
+.agent-review/
+*.log

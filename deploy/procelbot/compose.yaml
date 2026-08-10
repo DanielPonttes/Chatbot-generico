@@ -25,10 +25,15 @@ services:
       - ollama
     env_file:
       - ./secrets/proxy.env
+    entrypoint:
+      - /bin/sh
+      - /usr/local/bin/procelbot-caddy-entrypoint
     ports:
       - "127.0.0.1:80:80"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy-entrypoint.sh:/usr/local/bin/procelbot-caddy-entrypoint:ro
+      - ./secrets/proxy-basic-auth.hash:/run/secrets/procelbot_basic_auth_hash:ro
       - procelbot_caddy_data:/data
       - procelbot_caddy_config:/config
     networks:

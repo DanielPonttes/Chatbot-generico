@@ -1,0 +1,39 @@
+{
+    admin off
+}
+
+# Este stack expõe somente o Ollama. O backend FastAPI possui seu próprio
+# gateway/contrato e não deve ser apontado para este upstream.
+http://{$PROCELBOT_DOMAIN} {
+    encode zstd gzip
+
+    request_body {
+        max_size 2MB
+    }
+
+    header {
+        -Server
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        Cache-Control "no-store"
+    }
+
+    @unsafe_methods method TRACE CONNECT
+    respond @unsafe_methods 405
+
+    basic_auth {
+        procelbot {$PROCELBOT_BASIC_AUTH_HASH}
+    }
+
+    @model_admin path /api/pull* /api/push* /api/delete* /api/copy* /api/create* /api/blobs/* /api/show* /api/ps*
+    respond @model_admin 403
+
+    reverse_proxy ollama:11434
+
+    log {
+        output stdout
+        format json
+    }
+}

@@ -104,11 +104,17 @@ class Settings(BaseSettings):
     # ==========================================
     # API Pública
     # ==========================================
+    environment: Literal["development", "test", "staging", "production"] = "development"
+    """Ambiente de execução; produção aplica validações fail-closed."""
+
     api_key: str | None = None
     """
     Chave de acesso da API (header X-API-Key).
     Se None (padrão), a autenticação fica desabilitada (modo desenvolvimento).
     """
+
+    admin_api_key: str | None = None
+    """Chave separada para operações administrativas/destrutivas."""
 
     cors_allow_origins: str = "*"
     """
@@ -121,6 +127,27 @@ class Settings(BaseSettings):
     Limite de requisições por minuto por IP. 0 (padrão) desativa.
     Observação: o contador é em memória, por processo/worker.
     """
+
+    max_request_body_bytes: int = 2 * 1024 * 1024
+    """Tamanho máximo de corpo HTTP aceito pelo backend, em bytes."""
+
+    allowed_hosts: str = "localhost,127.0.0.1,testserver"
+    """Hosts aceitos pelo servidor, separados por vírgula."""
+
+    trusted_proxy_networks: str = ""
+    """Redes/IPs de proxies autorizados a informar X-Forwarded-For/Proto."""
+
+    docs_public: bool = True
+    """Mantém Swagger/ReDoc públicos em desenvolvimento; proteja na borda em produção."""
+
+    legacy_routes_enabled: bool = True
+    """Mantém as rotas sem /v1 durante a migração; desative em produção."""
+
+    allow_model_override: bool = True
+    """Permite que o cliente escolha um modelo por requisição (somente com allowlist em produção)."""
+
+    allowed_models: str = ""
+    """Modelos permitidos em model_override, separados por vírgula; vazio não restringe em dev."""
 
     # ==========================================
     # Integrações Externas - PostgreSQL Remoto

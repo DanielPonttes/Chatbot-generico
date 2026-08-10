@@ -11,12 +11,20 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Request
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.core.config import settings
-from app.core.security import RateLimitMiddleware, verify_api_key
+from app.core.security import (
+    RequestBodySizeLimitMiddleware,
+    RateLimitMiddleware,
+    SecurityHeadersMiddleware,
+    validate_runtime_security,
+    verify_api_key,
+)
 
 # Diretório de arquivos estáticos
 STATIC_DIR = Path(__file__).parent / "static"
@@ -48,6 +56,7 @@ async def lifespan(app: FastAPI):
     - Shutdown: libera recursos (conexões, arquivos)
     """
     # ----- STARTUP -----
+    validate_runtime_security()
     logger.info("=" * 50)
     logger.info(f"🚀 Iniciando {settings.app_name}")
     logger.info(f"   Provider: {settings.llm_provider}")
@@ -83,9 +92,11 @@ app = FastAPI(
     description=settings.app_description,
     version="1.0.0",
     lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json",
+    # As rotas de documentação são registradas abaixo para poderem passar
+    # pela mesma política de autenticação da API.
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
     openapi_tags=[
         {
             "name": "chat",
@@ -101,6 +112,33 @@ app = FastAPI(
         },
     ],
 )
+
+
+# ==========================================
+# Documentação protegível
+# ==========================================
+@app.get("/openapi.json", include_in_schema=False, dependencies=[Depends(verify_api_key)])
+async def openapi_schema() -> JSONResponse:
+    """Publica o contrato OpenAPI sem reintroduzir rotas fora de /v1."""
+    return JSONResponse(app.openapi())
+
+
+@app.get("/docs", include_in_schema=False, dependencies=[Depends(verify_api_key)])
+async def swagger_ui() -> HTMLResponse:
+    """Entrega o Swagger UI; a dependência permite protegê-lo em produção."""
+    return get_swagger_ui_html(
+        openapi_url="/openapi.json",
+        title=f"{settings.app_name} - Swagger UI",
+    )
+
+
+@app.get("/redoc", include_in_schema=False, dependencies=[Depends(verify_api_key)])
+async def redoc_ui() -> HTMLResponse:
+    """Entrega o ReDoc sob a mesma política do Swagger UI."""
+    return get_redoc_html(
+        openapi_url="/openapi.json",
+        title=f"{settings.app_name} - ReDoc",
+    )
 
 # ==========================================
 # Tratamento global de erros
@@ -123,23 +161,42 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 # ==========================================
 # Middleware
 # ==========================================
-# CORS - origens configuráveis via CORS_ALLOW_ORIGINS ("*" libera tudo, modo dev)
+# CORS - origens configuráveis via CORS_ALLOW_ORIGINS ("*" só para dev)
 def _parse_cors_origins(value: str) -> list[str]:
     """Converte a lista separada por vírgula em lista de origens ("*" se vazia)."""
     origins = [origin.strip() for origin in value.split(",") if origin.strip()]
     return origins or ["*"]
 
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=_parse_cors_origins(settings.cors_allow_origins),
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+def _parse_allowed_hosts(value: str) -> list[str]:
+    """Converte hosts sem aplicar o fallback permissivo reservado ao CORS."""
+    return [host.strip() for host in value.split(",") if host.strip()]
+
+
+allowed_hosts = _parse_allowed_hosts(settings.allowed_hosts)
 
 # Rate limit por IP (ativo apenas quando RATE_LIMIT_PER_MINUTE > 0)
 app.add_middleware(RateLimitMiddleware)
+if "*" not in allowed_hosts:
+    # Registrado depois do rate limit para ficar mais externo no Starlette;
+    # hosts inválidos não consomem a cota.
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(
+    RequestBodySizeLimitMiddleware,
+    max_body_bytes=settings.max_request_body_bytes,
+)
+
+# CORS fica no middleware mais externo para também adicionar seus headers em
+# respostas 429 geradas pelo rate limit.
+cors_origins = _parse_cors_origins(settings.cors_allow_origins)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials="*" not in cors_origins,
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Accept", "Content-Type", "X-API-Key", "Authorization"],
+)
 
 
 # ==========================================
@@ -154,17 +211,17 @@ app.include_router(router, tags=["chat"], dependencies=[Depends(verify_api_key)]
 # ==========================================
 # Rota raiz (serve a interface de testes)
 # ==========================================
-@app.get("/", include_in_schema=False)
+@app.get("/", include_in_schema=False, dependencies=[Depends(verify_api_key)])
 async def root():
     """Serve a página inicial."""
     return FileResponse(STATIC_DIR / "index.html")
 
-@app.get("/notifications", include_in_schema=False)
+@app.get("/notifications", include_in_schema=False, dependencies=[Depends(verify_api_key)])
 async def notifications_page():
     """Serve a interface de testes de notificações."""
     return FileResponse(STATIC_DIR / "notifications.html")
 
-@app.get("/rag", include_in_schema=False)
+@app.get("/rag", include_in_schema=False, dependencies=[Depends(verify_api_key)])
 async def rag_dashboard_page():
     """Serve o visualizador do RAG."""
     return FileResponse(STATIC_DIR / "rag.html")

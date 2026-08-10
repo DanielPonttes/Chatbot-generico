@@ -91,7 +91,7 @@ A UI mostra:
 
 ### Feedback e Historico
 
-Aprovacao/reprovacao chama `POST /notifications/saved` para salvar uma notificacao avaliada manualmente. O backend tambem salva automaticamente cada geracao proativa como `Pendente`.
+Aprovacao/reprovacao chama `PATCH /notifications/saved/{id}` com a chave administrativa. O `POST /notifications/saved` cria somente candidatos `Pendente`; o backend tambem salva automaticamente cada geracao proativa como `Pendente`.
 
 O modal de salvas usa:
 

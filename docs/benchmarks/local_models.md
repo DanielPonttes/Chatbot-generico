@@ -1,124 +1,130 @@
-# Benchmark de modelos locais: Qwen3.5-4B vs Gemma 4 E4B
+# Benchmark local: Gemma 4 26B A4B vs 31B
 
-Guia para medir e comparar performance, throughput e qualidade dos modelos locais recomendados para o chatbot.
+Guia para medir a performance do modelo aprovado para o agente de notificações
+e decidir, com evidência, se o Gemma 4 31B oferece qualidade suficiente para
+justificar o custo adicional.
 
-## O que medimos
+## Decisão padrão
 
-| Metrica | O que e | Por que importa |
-|---------|---------|-----------------|
-| **Cold start** | Tempo da primeira chamada (modelo carregado do disco) | Impacta o "primeiro usuario" apos restart |
-| **Latencia total** | Tempo de parede de uma chamada (pre-warm) | Latencia percebida pelo usuario |
-| **p50 / p95** | Mediana e percentil 95 da latencia | Mostra variabilidade; p95 e o que importa em producao |
-| **Tokens/s (geracao)** | Velocidade efetiva de geracao | Throughput bruto do modelo |
-| **Throughput concorrente** | Chamadas paralelas / segundo | Capacidade real sob carga |
+O modelo de produção inicial é `gemma4:26b`, o Gemma 4 26B A4B em formato
+quantizado. A variante `gemma4:26b-a4b-it-qat` pode ser testada para aumentar a
+margem de VRAM. O `gemma4:31b` é somente candidato de comparação.
 
-## Pre-requisitos
+O 26B é um modelo MoE e ativa menos parâmetros por token, enquanto o 31B é
+denso. Isso sugere vantagem de latência para o 26B, mas a decisão final deve
+ser baseada no hardware real e no conjunto de notificações do projeto.
 
-1. **Ollama instalado** na maquina que vai rodar o modelo (veja [`ollama_remote.md`](../setup/ollama_remote.md))
-2. **Modelos baixados**:
+## O que medir
+
+| Métrica | O que é | Por que importa |
+|---|---|---|
+| **Cold start** | Primeira chamada com o modelo sendo carregado | Impacta reinício e recuperação do serviço |
+| **Latência total** | Tempo de parede da chamada aquecida | Define a experiência e a vazão |
+| **p50 / p95** | Mediana e percentil 95 | Mostra a variabilidade em produção |
+| **Tokens/s** | Velocidade efetiva de geração | Mede throughput da GPU |
+| **VRAM** | Memória ocupada durante a geração | Evita fallback para CPU e OOM |
+| **Qualidade** | Fidelidade dos dados, tom e regras | É o critério para considerar o 31B |
+
+## Pré-requisitos
+
+1. **Ollama instalado** no host da GPU; veja [`ollama_remote.md`](../setup/ollama_remote.md).
+2. **RTX 5090 reconhecida** por `nvidia-smi`.
+3. **Modelo principal baixado**:
+
    ```bash
-   ollama pull qwen3.5:4b
-   ollama pull gemma4:e4b
+   ollama pull gemma4:26b
    ```
-3. **Python do projeto** com `httpx` (ja e dependencia):
+
+4. Para comparação opcional:
+
    ```bash
-   cd Chatbot-generico
+   ollama pull gemma4:31b
+   ollama pull gemma4:26b-a4b-it-qat
+   ```
+
+5. Python do projeto com `httpx`:
+
+   ```bash
    .venv/bin/pip install httpx
    ```
 
-## Como rodar
+## Como executar
 
-Da raiz do projeto:
+Da raiz do projeto, medir primeiro somente o modelo aprovado:
 
 ```bash
 .venv/bin/python scripts/benchmark_local_models.py \
     --base-url http://localhost:11434 \
-    --models qwen3.5:4b gemma4:e4b \
+    --models gemma4:26b \
     --prompts scripts/benchmark_prompts.json \
-    --iterations 3 \
+    --iterations 5 \
     --concurrency 1 4 8 \
-    --output benchmark_results.json
+    --output /tmp/gemma4-26b-results.json
 ```
 
-Argumentos:
-- `--base-url` - URL do Ollama (default `http://localhost:11434`)
-- `--models` - lista de modelos a comparar
-- `--prompts` - JSON com prompts representativos
-- `--iterations` - quantas vezes cada prompt e rodado em serie (default 3)
-- `--concurrency` - niveis de paralelismo a testar (default `1 4`)
-- `--concurrency-iterations` - rodadas por nivel de concorrencia (default 2)
-- `--output` - arquivo JSON com resultados brutos
-
-## Exemplo de saida
-
-```
-================================================================
-  RESUMO COMPARATIVO (pre-warm, latencia media por chamada)
-================================================================
-Modelo                 Cold (ms)  Avg (ms)  p50 (ms)  p95 (ms)      tok/s    tokens
---------------------------------------------------------------------------------
-qwen3.5:4b                   2300        450        430        680     220.0      85.0
-gemma4:e4b                  7800        720        700       1100     155.0      90.0
-
-================================================================================
-  THROUGHPUT POR CONCORRENCIA (pre-warm, 1 prompt, N chamadas em paralelo)
-================================================================================
-Modelo                       c=1                  c=4                  c=8
---------------------------------------------------------------------------------
-qwen3.5:4b          450ms/185.0           1600ms/210.0          2800ms/240.0
-gemma4:e4b         720ms/125.0           2500ms/145.0          4500ms/155.0
-```
-
-Interpretacao:
-- **Cold start** - Qwen3.5-4B carrega em ~2.3s, Gemma 4 E4B em ~7.8s (proporcional ao tamanho do modelo)
-- **Latencia** - Qwen e ~40% mais rapido pre-warm (3.4GB vs 9.6GB)
-- **Throughput** - Qwen escala melhor com concorrencia (210 vs 145 tok/s agregados a c=4)
-- **Tokens gerados** - Ambos geram volumes similares (80-90 tokens por prompt)
-
-## Como interpretar
-
-- **Cold start alto (>5s)**: modelo grande ou disco lento. Considerar variante quantizada mais agressiva (ex: `gemma4:e4b-it-qat`).
-- **p95 >> p50**: alta variabilidade. Considerar `OLLAMA_NUM_PARALLEL=1` se a causa for troca de contexto.
-- **Throughput nao escala com concorrencia**: GPU saturada. Em RTX 5090 a escala e quase linear ate c=8 para modelos 4B.
-
-## Comparacao com Gemini (cloud)
-
-Para baseline de qualidade/latencia versus API cloud:
+Para comparar qualidade e performance com o 31B, repetir o mesmo experimento:
 
 ```bash
-# 1. Adicione ao .env:
-LLM_PROVIDER=google
-GEMINI_API_KEY=sua_chave
-GEMINI_MODEL=gemini-3-flash-preview
-
-# 2. Suba o chatbot e chame:
-time curl -X POST http://localhost:8000/v1/chat \
-    -H "Content-Type: application/json" \
-    -d '{"message": "Convide o usuario para a missao Aula Economica. Sala 393. Recompensa 35 XP."}'
+.venv/bin/python scripts/benchmark_local_models.py \
+    --base-url http://localhost:11434 \
+    --models gemma4:26b gemma4:31b \
+    --prompts scripts/benchmark_prompts.json \
+    --iterations 5 \
+    --concurrency 1 4 8 \
+    --output /tmp/gemma4-26b-vs-31b.json
 ```
 
-Compare:
-- **Latencia**: Gemini cloud costuma ter 300-800ms por chamada (incluindo rede)
-- **Tokens/s**: tipicamente 50-150 tok/s dependendo do tier
-- **Custo**: ~$0.075 por 1M tokens input no Flash, ~$0.30 por 1M output
-- **Privacidade**: dados saem da rede local
+Argumentos principais:
 
-Para o chatbot de notificacoes curtas, o modelo local em RTX 5090 e **mais barato e mais rapido** que Gemini Flash a partir de ~50 notificacoes/segundo (custo zero de cloud amortiza o hardware).
+- `--base-url`: URL do Ollama, por padrão `http://localhost:11434`.
+- `--models`: tags locais a comparar.
+- `--prompts`: JSON com prompts representativos.
+- `--iterations`: repetições em série por prompt.
+- `--concurrency`: níveis de paralelismo.
+- `--output`: arquivo JSON com os resultados brutos.
 
-## Resultados por ambiente (template)
+## Avaliação de qualidade
 
-| Modelo          | Hardware        | Cold (ms) | Avg (ms) | p95 (ms) | tok/s | c=4 tok/s | c=8 tok/s | Notas                    |
-|-----------------|-----------------|-----------|----------|----------|-------|-----------|-----------|--------------------------|
-| qwen3.5:4b      | RTX 5090 (32GB) |           |          |          |       |           |           |                          |
-| qwen3.5:4b      | CPU (Xeon X)    |           |          |          |       |           |           |                          |
-| gemma4:e4b      | RTX 5090 (32GB) |           |          |          |       |           |           |                          |
-| gemini-3-flash  | cloud           |           |          |          |       |           |           | custo: ~$X por 1M tokens |
+O arquivo de prompts deve representar as categorias de notificação do projeto,
+incluindo contexto dinâmico, personas e restrições de tamanho. Para cada saída,
+avaliar:
 
-## Boas praticas
+- todos os valores factuais permanecem corretos;
+- nenhum placeholder fica sem resolução;
+- a mensagem não inventa recompensa, sala, prazo ou medição;
+- o tom corresponde à persona;
+- a mensagem é curta e acionável;
+- a saída permanece em português brasileiro;
+- a resposta não expõe raciocínio interno ou instruções do sistema.
 
-1. **Sempre inclua warmup** antes de medir (o script ja faz)
-2. **Ambiente estavel**: sem outros processos na GPU, sem throttling termico
-3. **Mesmo prompt para concorrencia** para isolar a variavel (o script usa `prompts[0]`)
-4. **Salve os resultados** - o JSON de saida tem todos os numeros brutos
-5. **Compare quantizacoes**: `qwen3.5:4b` vs `qwen3.5:4b-q8_0` mostra tradeoff qualidade vs velocidade
-6. **Repita em horarios diferentes** para detectar variabilidade
+Só promover o 31B se ele melhorar de forma consistente a qualidade no conjunto
+de avaliação e ainda cumprir a meta de latência acordada. Uma diferença em
+benchmarks gerais não substitui a avaliação específica das notificações.
+
+## Registro dos resultados
+
+| Modelo | Quantização | Hardware | Cold (ms) | p50 (ms) | p95 (ms) | tok/s | VRAM | Erros | Decisão |
+|---|---|---|---:|---:|---:|---:|---:|---:|---|
+| `gemma4:26b` | Q4 | RTX 5090 32 GB | | | | | | | padrão |
+| `gemma4:26b-a4b-it-qat` | QAT | RTX 5090 32 GB | | | | | | | opcional |
+| `gemma4:31b` | Q4 | RTX 5090 32 GB | | | | | | | candidato |
+
+O Ollama lista aproximadamente 18 GB para `gemma4:26b` e 20 GB para
+`gemma4:31b`; a memória adicional do KV cache cresce com o contexto. Portanto,
+começar com contexto de 8K ou 16K e acompanhar `ollama ps` e `nvidia-smi`.
+
+## Boas práticas
+
+1. Fazer warmup antes das medições aquecidas; o script já faz isso.
+2. Usar o mesmo prompt para comparar concorrência.
+3. Não executar outros modelos ou cargas na GPU durante o benchmark.
+4. Repetir o experimento em ambiente estável, sem throttling térmico.
+5. Manter o thinking desativado para notificações curtas.
+6. Guardar o JSON bruto fora do Git e registrar apenas o resumo aprovado.
+7. Não usar provider cloud como parte do gate de custo ou privacidade.
+
+## Referências
+
+- [Visão geral oficial do Gemma 4](https://ai.google.dev/gemma/docs/core)
+- [Modelos Gemma 4 no Ollama](https://ollama.com/library/gemma4)
+- [Especificações da RTX 5090](https://www.nvidia.com/en-gb/geforce/graphics-cards/50-series/rtx-5090/)

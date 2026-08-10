@@ -2,6 +2,19 @@
 
 Backend em FastAPI. A composicao da aplicacao fica em `app/main.py`, as rotas em `app/api/routes.py`, os schemas em `app/models/schemas.py` e a logica de dominio em `app/services/`.
 
+## Contrato público atual
+
+O contrato novo usa o prefixo `/v1`. As rotas sem prefixo permanecem apenas
+para compatibilidade temporária e devem ser desativadas antes da publicação.
+Endpoints protegidos exigem o header `X-API-Key`; `/v1/health` e o OpenAPI são
+exceções para monitoramento e descoberta do contrato. Swagger/ReDoc passam pela
+mesma dependência e podem ser privados com `DOCS_PUBLIC=false`. A matriz de
+acesso e as decisões de segurança estão em [SPEC-002](../specs/02-public-api-security-and-contracts.md).
+
+Operações administrativas, como aprovar/remover notificações ou invocar um
+endpoint Spring com efeito externo, exigem uma segunda chave no mesmo header,
+configurada em `ADMIN_API_KEY`.
+
 ## Convencoes
 
 - Respostas de erro usam `HTTPException` com `detail` estruturado quando possivel.
@@ -162,7 +175,7 @@ Salva manualmente uma notificacao:
 
 ```json
 {
-  "type": "Aprovada",
+  "type": "Pendente",
   "content": "Texto da notificacao",
   "persona": "motivador",
   "model": "gemini-3-flash-preview",
@@ -171,7 +184,9 @@ Salva manualmente uma notificacao:
 }
 ```
 
-`id` e `date` podem ser enviados, mas se ausentes sao gerados no servidor.
+`POST` sempre cria uma notificacao `Pendente`; `id` e `date` podem ser
+enviados, mas se ausentes sao gerados no servidor. A aprovacao/reprovacao e a
+remocao exigem `ADMIN_API_KEY` e devem usar os endpoints abaixo.
 
 ### `PATCH /notifications/saved/{notif_id}`
 
@@ -183,6 +198,8 @@ Atualiza avaliacao:
 }
 ```
 
+Exige a chave administrativa.
+
 Valores aceitos:
 
 - `Pendente`
@@ -191,11 +208,11 @@ Valores aceitos:
 
 ### `DELETE /notifications/saved/{notif_id}`
 
-Remove uma notificacao.
+Remove uma notificacao. Exige a chave administrativa.
 
 ### `DELETE /notifications/saved/all`
 
-Remove todas as notificacoes.
+Remove todas as notificacoes. Exige a chave administrativa.
 
 ## RAG
 

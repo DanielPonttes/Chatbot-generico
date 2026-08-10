@@ -1,0 +1,15 @@
+[Unit]
+Description=Procelbot Ollama and protected proxy stack
+Requires=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/procelbot
+ExecStart=/usr/bin/docker compose --project-name procelbot up -d
+ExecStop=/usr/bin/docker compose --project-name procelbot stop
+RemainAfterExit=yes
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

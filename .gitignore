@@ -5,6 +5,8 @@ env/
 
 # Variáveis de ambiente (contém secrets)
 .env
+deploy/procelbot/secrets/
+**/secrets/
 
 # Python
 __pycache__/
@@ -48,6 +50,7 @@ test-results/
 # Logs
 *.log
 logs/
+.agent-review/
 
 # SQLite database
 *.db

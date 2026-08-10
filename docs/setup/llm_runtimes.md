@@ -15,13 +15,13 @@ Guia para escolher o servidor/embalagem do modelo local. O projeto suporta Ollam
 | Instalacao            | 1 comando       | Binario ou build   | Python pip          | GUI             |
 | Config remoto (SSH)   | Trivial         | Trivial            | Trivial             | Trabalhoso      |
 | Headless (server)     | Sim             | Sim (`llama-server`)| Sim                | Possivel (REST)  |
-| Modelo recomendado    | qwen3.5:4b      | gguf do HF         | HF direto           | gguf do HF       |
+| Modelo recomendado    | gemma4:26b      | GGUF do HF         | HF direto           | GGUF do HF       |
 
 ## Ollama (recomendado para o projeto)
 
 **O que e**: runtime embalado que usa llama.cpp por baixo, com model registry, CLI e API REST propria.
 
-- Prós: instalacao em 1 comando (`curl ... | sh`); catalogo de modelos ja quantizados (qwen3.5:4b, gemma4:e4b etc); API simples; suporte a multimodal e thinking mode; OLLAMA_NUM_PARALLEL para concorrencia.
+- Prós: instalacao em 1 comando (`curl ... | sh`); catálogo de modelos já quantizados, incluindo Gemma 4 26B A4B; API simples; suporte a multimodal e thinking mode; `OLLAMA_NUM_PARALLEL` para concorrência.
 - Contras: API proprietaria (mas existe OpenAI-compat opcional em `/v1/chat/completions`); limitado aos modelos do catalogo; menos flexivel que llama.cpp puro.
 - **Atracao para o projeto**: ja existe um `OllamaProvider` em `app/services/llm_provider.py` consumindo a API do Ollama — zero trabalho para trocar de modelo.
 - Quando usar: primeira opcao, especialmente se o modelo esta no catalogo do Ollama.
@@ -55,10 +55,10 @@ Guia para escolher o servidor/embalagem do modelo local. O projeto suporta Ollam
 
 **Use Ollama**. Motivos:
 
-1. **Ja integrado**: o `OllamaProvider` em `app/services/llm_provider.py` consome a API do Ollama. Trocar de modelo (ex: `gemma4:e4b` → `qwen3.5:4b`) e so mudar `OLLAMA_MODEL` no `.env`.
+1. **Ja integrado**: o `OllamaProvider` em `app/services/llm_provider.py` consome a API do Ollama. Trocar de modelo (ex.: `gemma4:26b` → `gemma4:31b`) exige apenas mudar `OLLAMA_MODEL` no `.env`.
 2. **Instalacao trivial**: `curl -fsSL https.ollama.com/install.sh | sh` em qualquer Linux/macOS/WSL; configuracao em uma linha no `.env` do projeto.
-3. **Modelo alvo no catalogo**: `qwen3.5:4b` (3.4GB, q4_K_M) ja esta no Ollama, com 256K de contexto.
-4. **10+ notificacoes/min e folgado** numa RTX 5090 — Ollama e llama.cpp tem throughput equivalente nesse caso, e vLLM so compensa em cargas muito maiores.
+3. **Modelo alvo no catalogo**: `gemma4:26b` (Gemma 4 26B A4B, MoE) está disponível no Ollama; a variante padrão ocupa cerca de 18 GB e possui contexto de até 256K.
+4. **Adequado ao hardware**: a RTX 5090 possui 32 GB de VRAM. O 26B deixa mais margem para KV cache e concorrência que o 31B; a latência e o throughput devem ser confirmados pelo benchmark do projeto.
 5. **Operacao via SSH facil**: monitorar com `ollama ps`, baixar modelos com `ollama pull`, ajustar concorrencia com `OLLAMA_NUM_PARALLEL` e `OLLAMA_NUM_GPU` no systemd.
 6. **OpenAI-compat disponivel** (`:11434/v1/chat/completions`): se no futuro quiser trocar para vLLM/LM Studio/llama.cpp-server, basta criar um `OpenAIProvider` que implemente a mesma interface `LLMProvider` do projeto.
 

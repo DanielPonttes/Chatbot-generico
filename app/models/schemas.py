@@ -4,8 +4,13 @@ Schemas Pydantic para validação de requests e responses.
 Define os modelos de dados usados na API.
 """
 
+import json
 from typing import Any, Literal
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+MODEL_NAME_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,99}$"
+NOTIFICATION_CONTEXT_MAX_BYTES = 8_192
 
 
 class ChatRequest(BaseModel):
@@ -28,15 +33,17 @@ class ChatRequest(BaseModel):
     
     model_override: str | None = Field(
         default=None,
-        description="Nome do modelo específico para esta requisição (ex: gemini-3-pro-preview)",
+        max_length=100,
+        pattern=MODEL_NAME_PATTERN,
+        description="Nome do modelo específico, se habilitado pela allowlist do ambiente",
     )
 
 
 class PersonaOverride(BaseModel):
     """Override temporário para a persona."""
     
-    description: str | None = Field(None, description="Nova descrição para a persona")
-    system_prompt: str | None = Field(None, description="Novo system prompt")
+    description: str | None = Field(None, max_length=1000, description="Nova descrição para a persona")
+    system_prompt: str | None = Field(None, max_length=4000, description="Novo system prompt")
 
 
 class ProactiveChatRequest(BaseModel):
@@ -61,7 +68,9 @@ class ProactiveChatRequest(BaseModel):
     
     model_override: str | None = Field(
         default=None,
-        description="Nome do modelo específico para esta requisição (ex: gemini-3-pro-preview)",
+        max_length=100,
+        pattern=MODEL_NAME_PATTERN,
+        description="Nome do modelo específico, se habilitado pela allowlist do ambiente",
         examples=["gemini-1.5-pro", "gemini-1.5-flash"],
     )
     
@@ -95,6 +104,7 @@ class ProactiveChatRequest(BaseModel):
     )
     notification_context: dict[str, Any] | None = Field(
         default=None,
+        max_length=32,
         description=(
             "Variáveis dinâmicas do template do NotificationType. "
             "Ex.: {'streak_days': 14, 'hours_remaining': 3}"
@@ -104,6 +114,26 @@ class ProactiveChatRequest(BaseModel):
             {"coins_amount": 500, "expiry_deadline": "fim do mês", "redemption_example": "lâmpadas LED"},
         ],
     )
+
+    @field_validator("notification_context")
+    @classmethod
+    def validate_notification_context_size(
+        cls,
+        value: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        """Limita chaves e tamanho serializado do contexto dinâmico."""
+        if value is None:
+            return None
+
+        try:
+            serialized = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+        except (TypeError, ValueError) as exc:
+            raise ValueError("notification_context deve conter apenas valores JSON") from exc
+        if len(value) > 32 or len(serialized.encode("utf-8")) > NOTIFICATION_CONTEXT_MAX_BYTES:
+            raise ValueError(
+                "notification_context deve ter no máximo 32 chaves e 8 KiB serializados"
+            )
+        return value
 
 
 class RAGSearchRequest(BaseModel):
@@ -357,12 +387,13 @@ class ErrorResponse(BaseModel):
 
 class SavedNotificationCreate(BaseModel):
     """Payload recebido no POST /notifications/saved."""
-    type: Literal["Pendente", "Aprovada", "Reprovada"] = "Pendente"
-    content: str
-    persona: str
-    model: str
-    target_profile: str | None = None
-    prompt_used: str | None = None
+    # A criação pública sempre começa pendente; revisão ocorre via PATCH admin.
+    type: Literal["Pendente"] = "Pendente"
+    content: str = Field(..., min_length=1, max_length=4000)
+    persona: str = Field(..., min_length=1, max_length=100)
+    model: str = Field(..., min_length=1, max_length=100, pattern=MODEL_NAME_PATTERN)
+    target_profile: str | None = Field(default=None, max_length=100)
+    prompt_used: str | None = Field(default=None, max_length=8000)
     id: str | None = None
     date: str | None = None
 

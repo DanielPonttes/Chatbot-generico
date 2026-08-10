@@ -8,15 +8,17 @@ Define os endpoints principais:
 - PATCH /notifications/saved/{id}: avalia uma notificação (Aprovada / Reprovada)
 """
 
+import asyncio
 import logging
 import uuid
 from datetime import datetime, timezone
 
 import httpx
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.config import settings
+from app.core.security import validate_model_override, verify_admin_api_key
 from app.models.schemas import (
     ChatRequest,
     ChatResponse,
@@ -99,6 +101,8 @@ async def chat(request: ChatRequest) -> ChatResponse:
     """
     logger.info(f"Chat request - session: {request.session_id}, message length: {len(request.message)}")
 
+    validated_model_override = validate_model_override(request.model_override)
+
     try:
         # Obtém instâncias dos serviços
         provider = get_llm_provider()
@@ -106,7 +110,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
 
         # Recupera histórico formatado para o LLM
         history = memory.get_formatted_history(request.session_id)
-        reply = await provider.generate(request.message, history, model_override=request.model_override)
+        reply = await provider.generate(request.message, history, model_override=validated_model_override)
 
         # Gera resposta
         memory.add_message(request.session_id, "user", request.message)
@@ -114,7 +118,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
 
         logger.info(f"Chat response - session: {request.session_id}, reply length: {len(reply)}")
 
-        used_model = request.model_override if request.model_override else provider.model
+        used_model = validated_model_override if validated_model_override else provider.model
 
         return ChatResponse(
             session_id=request.session_id,
@@ -198,13 +202,15 @@ async def chat_proactive(request: ProactiveChatRequest) -> ChatResponse:
     O frontend pode depois chamar PATCH /notifications/saved/{id} para
     marcar a notificação como "Aprovada" ou "Reprovada".
     """
+    validated_model_override = validate_model_override(request.model_override)
+
     try:
         # Gera mensagem com overrides e RAG
         result = await PersonaService.generate_proactive_message(
             request.persona_id, 
             target_profile_id=request.target_profile_id,
             persona_override=request.persona_override,
-            model_override=request.model_override,
+            model_override=validated_model_override,
             use_rag=request.use_rag,
             room_id=request.room_id,
             sensor_external_id=request.sensor_external_id,
@@ -214,7 +220,7 @@ async def chat_proactive(request: ProactiveChatRequest) -> ChatResponse:
         )
 
         provider = get_llm_provider()
-        used_model = request.model_override if request.model_override else provider.model
+        used_model = validated_model_override if validated_model_override else provider.model
 
         # ----------------------------------------------------------------
         # Persiste automaticamente com status "Pendente"
@@ -253,7 +259,10 @@ async def chat_proactive(request: ProactiveChatRequest) -> ChatResponse:
         logger.exception(f"Error in proactive chat: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"error": "internal_error", "message": str(e)},
+            detail={
+                "error": "internal_error",
+                "message": "Erro interno ao gerar a notificação. Consulte os logs.",
+            },
         )
 
 
@@ -272,7 +281,8 @@ def _probe_external_components() -> dict[str, str]:
         db_health = get_remote_postgres_catalog_service().health()
         components["database"] = f"connected ({db_health['database_name']})"
     except Exception as exc:
-        components["database"] = f"unavailable: {exc}"
+        logger.warning("Database health probe failed: %s", exc)
+        components["database"] = "unavailable"
 
     try:
         spring_info = get_spring_api_catalog_service().get_connection_info()
@@ -281,7 +291,8 @@ def _probe_external_components() -> dict[str, str]:
             response = client.get(f"{spring_info['base_url']}/actuator/health")
         components["spring_api"] = f"reachable (HTTP {response.status_code})"
     except Exception as exc:
-        components["spring_api"] = f"unreachable: {exc}"
+        logger.warning("Spring health probe failed: %s", exc)
+        components["spring_api"] = "unreachable"
 
     return components
 
@@ -293,7 +304,9 @@ def _probe_external_components() -> dict[str, str]:
     description="Retorna o status da aplicação, do provider LLM e dos componentes externos.",
 )
 async def health() -> HealthResponse:
-    components = _probe_external_components()
+    # O probe usa clientes síncronos legados; isolá-lo em uma thread evita
+    # bloquear o event loop público durante timeouts de integrações externas.
+    components = await asyncio.to_thread(_probe_external_components)
     try:
         provider = get_llm_provider()
         is_available = await provider.is_available()
@@ -572,6 +585,7 @@ async def lookup_people(
 @router.post(
     "/integrations/spring/endpoints/{endpoint_id}/invoke",
     response_model=SpringEndpointInvokeResponse,
+    dependencies=[Depends(verify_admin_api_key)],
     tags=["integrations"],
     summary="Invocar um endpoint catalogado da API Spring",
     description=(
@@ -627,7 +641,10 @@ async def semantic_search(request: RAGSearchRequest) -> RAGSearchResponse:
         logger.exception(f"Erro na busca RAG: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"error": "rag_search_error", "message": str(e)},
+            detail={
+                "error": "rag_search_error",
+                "message": "Erro interno na busca RAG. Consulte os logs.",
+            },
         )
 
 
@@ -656,7 +673,10 @@ async def create_saved_notification(request: SavedNotificationCreate):
     if not success:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Não foi possível salvar a notificação (ID duplicado ou erro).",
+            detail={
+                "error": "notification_save_failed",
+                "message": "Não foi possível salvar a notificação (ID duplicado ou erro).",
+            },
         )
     return {"status": "success"}
 
@@ -664,6 +684,7 @@ async def create_saved_notification(request: SavedNotificationCreate):
 @router.patch(
     "/notifications/saved/{notif_id}",
     response_model=dict,
+    dependencies=[Depends(verify_admin_api_key)],
     summary="Avaliar notificação",
     description=(
         "Atualiza o status de uma notificação para 'Aprovada' ou 'Reprovada'. "
@@ -679,7 +700,10 @@ async def evaluate_notification(notif_id: str, request: NotificationTypeUpdate):
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Notificação não encontrada ou tipo inválido.",
+            detail={
+                "error": "notification_not_found_or_invalid_type",
+                "message": "Notificação não encontrada ou tipo inválido.",
+            },
         )
     return {"status": "success", "id": notif_id, "type": request.type}
 
@@ -687,6 +711,7 @@ async def evaluate_notification(notif_id: str, request: NotificationTypeUpdate):
 @router.delete(
     "/notifications/saved/all",
     response_model=dict,
+    dependencies=[Depends(verify_admin_api_key)],
     summary="Limpar todas as notificações salvas",
 )
 async def clear_saved_notifications():
@@ -697,6 +722,7 @@ async def clear_saved_notifications():
 @router.delete(
     "/notifications/saved/{notif_id}",
     response_model=dict,
+    dependencies=[Depends(verify_admin_api_key)],
     summary="Deletar uma notificação salva específica",
 )
 async def delete_saved_notification(notif_id: str):
@@ -704,6 +730,9 @@ async def delete_saved_notification(notif_id: str):
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Notificação não encontrada ou erro ao deletar.",
+            detail={
+                "error": "notification_delete_failed",
+                "message": "Notificação não encontrada ou erro ao deletar.",
+            },
         )
     return {"status": "success"}

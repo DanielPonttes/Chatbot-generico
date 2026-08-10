@@ -151,7 +151,7 @@ Variaveis principais:
 | `GEMINI_MODEL` | Modelo Gemini padrao, como `gemini-3-flash-preview`. |
 
 | `OLLAMA_BASE_URL` | URL do Ollama (local ou remoto). Veja `docs/setup/ollama_remote.md` se for em outra máquina. |
-| `OLLAMA_MODEL` | Modelo local, como `qwen3.5:4b` (Qwen3.5-4B) ou `qwen2.5:0.5b` (mais leve). |
+| `OLLAMA_MODEL` | Modelo local padrão: `gemma4:26b` (Gemma 4 26B A4B). A variante `gemma4:26b-a4b-it-qat` é uma opção mais econômica em VRAM. |
 | `HF_TOKEN` | Token HuggingFace. |
 
 | `HF_MODEL` | Modelo HuggingFace. |
@@ -170,8 +170,16 @@ Variaveis principais:
 | `REMOTE_SPRING_USERNAME` | E-mail de login da API Spring (`POST /api/auth/login`). |
 | `REMOTE_SPRING_PASSWORD` | Senha de login da API Spring. O JWT é cacheado e renovado automaticamente. |
 | `API_KEY` | Chave de acesso da API (header `X-API-Key`). Vazia = aberta (dev). |
+| `ADMIN_API_KEY` | Chave separada para operações destrutivas/administrativas. |
 | `CORS_ALLOW_ORIGINS` | Origens CORS separadas por virgula. `*` libera tudo (dev). |
 | `RATE_LIMIT_PER_MINUTE` | Limite de requisicoes/min por IP. `0` desativa. |
+| `MAX_REQUEST_BODY_BYTES` | Tamanho maximo do corpo HTTP aceito pelo backend. |
+| `ALLOWED_HOSTS` | Hosts aceitos pelo servidor, separados por virgula. |
+| `TRUSTED_PROXY_NETWORKS` | IPs/redes autorizados a informar headers de proxy. |
+| `DOCS_PUBLIC` | Mantem Swagger/ReDoc publicos. Use `false` em producao. |
+| `LEGACY_ROUTES_ENABLED` | Mantem rotas sem `/v1` durante a migracao. Desative em producao. |
+| `ALLOW_MODEL_OVERRIDE` | Permite escolher modelo por request; em producao exige allowlist. |
+| `ALLOWED_MODELS` | Modelos aceitos em `model_override`, separados por virgula. |
 
 
 
@@ -200,7 +208,7 @@ LLM_PROVIDER=ollama
 
 OLLAMA_BASE_URL=http://localhost:11434
 
-OLLAMA_MODEL=qwen3.5:4b
+OLLAMA_MODEL=gemma4:26b
 
 ```
 
@@ -235,6 +243,25 @@ Acesse:
 - Swagger: `http://localhost:8000/docs`
 
 - ReDoc: `http://localhost:8000/redoc`
+
+
+## Revisao multiagente
+
+O wrapper [`scripts/agent_review.sh`](scripts/agent_review.sh) usa o Gemini 3.6 Flash High via Agy e o Grok 4.5 High via Cursor Agent em modo read-only. O contrato de saída e os critérios do gate estão em [`agent.md`](agent.md).
+
+```bash
+# Pareceres independentes em paralelo
+scripts/agent_review.sh review --base origin/main
+
+# Triagem Gemini + gate final Grok; modo padrão
+scripts/agent_review.sh gate --run-tests
+
+# Limitar o contexto e preservar relatórios para CI/inspeção
+scripts/agent_review.sh gate --file app/api/routes.py --file tests/test_api.py \
+  --out-dir .agent-review/latest
+```
+
+O gate retorna `0` para `PASS` ou `PASS_WITH_WARNINGS`, `1` para `BLOCK` ou `NEEDS_HUMAN` e `2` para falhas de configuração, agentes ou protocolo. Use `scripts/agent_review.sh gate --dry-run` para validar a configuração sem consumir chamadas.
 
 
 
@@ -555,7 +582,9 @@ Para detalhes de protecao de branch, veja `docs/setup/ci.md`.
 - `docs/setup/installation.md`: instalacao e execucao.
 - `docs/setup/ollama_remote.md`: Ollama em outra máquina (GPU dedicada) via rede ou tunel SSH.
 - `docs/setup/llm_runtimes.md`: comparativo Ollama vs llama.cpp vs vLLM vs LM Studio.
-- `docs/benchmarks/local_models.md`: como medir e comparar Qwen3.5-4B vs Gemma 4 E4B.
+- `docs/benchmarks/local_models.md`: como medir Gemma 4 26B A4B e comparar com o 31B.
+- `docs/specs/README.md`: índice das especificações executáveis por etapa.
+- `docs/specs/01-runtime-local-ollama.md`: plano detalhado da primeira etapa, com Ollama e RTX 5090.
 - `docs/backend/api.md`: referencia de API.
 - `docs/frontend/interfaces.md`: telas HTML.
 
@@ -571,13 +600,15 @@ Para detalhes de protecao de branch, veja `docs/setup/ci.md`.
 
 
 
-- Autenticacao opcional por API key: defina `API_KEY` e os endpoints passam a exigir o header `X-API-Key` (exceto `/health` e docs, publicos para monitoramento).
+- Autenticacao por API key: defina `API_KEY` e os endpoints protegidos passam a exigir `X-API-Key`. `/v1/health` e `/openapi.json` ficam publicos; Swagger/ReDoc podem ser protegidos com `DOCS_PUBLIC=false`.
 
-- CORS configuravel via `CORS_ALLOW_ORIGINS` (padrao `*`; restrinja em producao).
+- Operacoes administrativas (revisao/remocao de notificacoes e invocacao Spring) exigem uma chave separada em `ADMIN_API_KEY`.
+
+- CORS configuravel via `CORS_ALLOW_ORIGINS` (padrao `*`; restrinja em producao). A inicializacao de producao falha se os controles obrigatorios nao estiverem configurados.
 
 - Rate limit por IP via `RATE_LIMIT_PER_MINUTE` (contador em memoria, por worker).
 
-- Rotas versionadas sob `/v1` (ex: `/v1/chat`, `/v1/health`). Caminhos legados sem prefixo seguem ativos, ocultos do OpenAPI, e serao deprecados.
+- Rotas versionadas sob `/v1` (ex: `/v1/chat`, `/v1/health`). Caminhos legados sem prefixo seguem ativos apenas durante a migracao e podem ser encerrados com `LEGACY_ROUTES_ENABLED=false`.
 
 - O `/health` reporta o estado dos componentes externos (PostgreSQL e API Spring) no campo `components`.
 
@@ -590,4 +621,3 @@ Para detalhes de protecao de branch, veja `docs/setup/ci.md`.
 - O RAG depende de chave Google para embeddings.
 
 - Para comparar modelos locais (latencia, throughput, custo), use `scripts/benchmark_local_models.py` (veja `docs/benchmarks/local_models.md`).
-

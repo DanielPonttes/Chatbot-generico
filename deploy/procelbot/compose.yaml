@@ -1,0 +1,47 @@
+name: procelbot
+
+services:
+  ollama:
+    image: ollama/ollama:0.30.8
+    container_name: procelbot-ollama
+    restart: unless-stopped
+    gpus: all
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_NO_CLOUD: "1"
+      OLLAMA_CONTEXT_LENGTH: "16384"
+    volumes:
+      - procelbot_ollama_models:/root/.ollama
+    expose:
+      - "11434"
+    networks:
+      - procelbot_internal
+
+  proxy:
+    image: caddy:2-alpine
+    container_name: procelbot-proxy
+    restart: unless-stopped
+    depends_on:
+      - ollama
+    env_file:
+      - ./secrets/proxy.env
+    ports:
+      - "127.0.0.1:80:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - procelbot_caddy_data:/data
+      - procelbot_caddy_config:/config
+    networks:
+      - procelbot_internal
+
+networks:
+  procelbot_internal:
+    name: procelbot_internal
+
+volumes:
+  procelbot_ollama_models:
+    name: procelbot_ollama_models
+  procelbot_caddy_data:
+    name: procelbot_caddy_data
+  procelbot_caddy_config:
+    name: procelbot_caddy_config

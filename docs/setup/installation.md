@@ -141,7 +141,7 @@ Instale e rode:
 
 ollama serve
 
-ollama pull qwen3.5:4b
+ollama pull gemma4:26b
 
 ```
 
@@ -157,7 +157,7 @@ LLM_PROVIDER=ollama
 
 OLLAMA_BASE_URL=http://localhost:11434
 
-OLLAMA_MODEL=qwen3.5:4b
+OLLAMA_MODEL=gemma4:26b
 
 ```
 
@@ -384,4 +384,3 @@ requirements.txt
 - PostgreSQL remoto indisponivel: confirme `REMOTE_PG_*`, rede e permissao.
 
 - Playwright falhando no Linux: rode `sudo npx playwright install --with-deps chromium`.
-

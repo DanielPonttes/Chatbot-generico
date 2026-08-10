@@ -290,6 +290,7 @@ def test_lookup_context_people(client, monkeypatch):
 
 
 def test_invoke_spring_endpoint(client, monkeypatch):
+    monkeypatch.setattr(settings, "admin_api_key", "admin-secreta")
     monkeypatch.setattr(
         routes,
         "get_spring_api_catalog_service",
@@ -299,6 +300,7 @@ def test_invoke_spring_endpoint(client, monkeypatch):
     response = client.post(
         "/integrations/spring/endpoints/sensor_measurements_latest/invoke",
         json={"path_params": {"sensor_external_id": "SII-001"}},
+        headers={"X-API-Key": "admin-secreta"},
     )
 
     assert response.status_code == 200

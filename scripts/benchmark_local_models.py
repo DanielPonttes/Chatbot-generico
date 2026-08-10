@@ -13,9 +13,9 @@ Tambem roda carga concorrente para medir throughput.
 Uso:
     .venv/bin/python scripts/benchmark_local_models.py \\
         --base-url http://localhost:11434 \\
-        --models qwen3.5:4b gemma4:e4b \\
+        --models gemma4:26b gemma4:31b \\
         --prompts scripts/benchmark_prompts.json \\
-        --iterations 3 \\
+        --iterations 5 \\
         --concurrency 1 4 8
 
 Saida:
@@ -289,7 +289,7 @@ def print_concurrency(summaries: list[ModelSummary], concurrency_data: dict[str,
 async def main() -> int:
     parser = argparse.ArgumentParser(description="Benchmark de modelos locais via Ollama")
     parser.add_argument("--base-url", default="http://localhost:11434", help="URL do Ollama")
-    parser.add_argument("--models", nargs="+", required=True, help="Nomes dos modelos a testar (ex: qwen3.5:4b)")
+    parser.add_argument("--models", nargs="+", required=True, help="Nomes dos modelos a testar (ex: gemma4:26b)")
     parser.add_argument("--prompts", type=Path, required=True, help="JSON com lista de prompts")
     parser.add_argument("--iterations", type=int, default=3, help="Iteracoes por (modelo, prompt) em serie")
     parser.add_argument("--concurrency", nargs="*", type=int, default=[1, 4], help="Niveis de concorrencia a testar")

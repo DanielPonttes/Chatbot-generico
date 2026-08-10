@@ -96,15 +96,26 @@ O ambiente de execução deve possuir pelo menos:
 LLM_PROVIDER=ollama
 OLLAMA_BASE_URL=http://127.0.0.1:11434
 OLLAMA_MODEL=gemma4:26b
+# Preencher somente se o gateway remoto exigir Basic Auth.
+OLLAMA_USERNAME=
+OLLAMA_PASSWORD=
 ```
 
-Quando o Ollama estiver em outro host, apenas a URL muda:
+Quando o Ollama estiver em outro host, a URL muda. Se houver um proxy
+protegido, informe também as credenciais somente no `.env` real do backend:
 
 ```env
 LLM_PROVIDER=ollama
-OLLAMA_BASE_URL=http://HOST_PRIVADO_DA_GPU:11434
+OLLAMA_BASE_URL=https://ollama.seu-dominio.example
+OLLAMA_USERNAME=usuario-do-gateway
+OLLAMA_PASSWORD=segredo-do-gateway
 OLLAMA_MODEL=gemma4:26b
 ```
+
+Para uma conexão privada sem autenticação, pode ser usada uma URL como
+`http://HOST_PRIVADO_DA_GPU:11434`, mantendo `OLLAMA_USERNAME` e
+`OLLAMA_PASSWORD` vazios. Nunca versionar valores reais nem enviar a senha ao
+frontend.
 
 Regras:
 

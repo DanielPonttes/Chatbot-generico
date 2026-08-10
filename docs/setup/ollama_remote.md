@@ -82,9 +82,15 @@ Na maquina onde o chatbot roda, edite o `.env`:
 
 ```env
 LLM_PROVIDER=ollama
-OLLAMA_BASE_URL=http://IP_DA_MAQUINA_OLLAMA:11434
+OLLAMA_BASE_URL=https://ollama.seu-dominio.example
+OLLAMA_USERNAME=usuario-do-gateway
+OLLAMA_PASSWORD=segredo-do-gateway
 OLLAMA_MODEL=gemma4:26b
 ```
+
+`OLLAMA_USERNAME` e `OLLAMA_PASSWORD` são necessários quando o gateway usa
+Basic Auth, como no proxy Caddy do deploy. Essas variáveis devem existir apenas
+no backend; nunca envie a senha ao navegador ou ao frontend.
 
 Para evitar expor o Ollama na internet, mantenha as duas maquinas na mesma rede privada/VPN.
 
@@ -104,6 +110,13 @@ Suba o chatbot e chame `/v1/health`:
 
 ```bash
 curl http://localhost:8000/v1/health
+```
+
+Para testar diretamente um gateway protegido, usando variáveis de ambiente sem
+escrever a senha no arquivo:
+
+```bash
+curl --user "$OLLAMA_USERNAME:$OLLAMA_PASSWORD" "$OLLAMA_BASE_URL/api/tags"
 ```
 
 O campo `provider` deve ser `ollama` e `provider_available` deve ser `true`. Em caso de erro:

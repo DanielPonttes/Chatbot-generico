@@ -97,14 +97,45 @@ class OllamaProvider(LLMProvider):
     
     def __init__(
         self,
-        base_url: str = settings.ollama_base_url,
-        model_name: str = settings.ollama_model,
+        base_url: str | None = None,
+        model_name: str | None = None,
+        username: str | None = None,
+        password: str | None = None,
         timeout: float = 120.0,  # Modelos pequenos podem demorar na primeira execução
     ):
-        self._base_url = base_url.rstrip("/")
-        self._model_name = model_name
+        actual_base_url = base_url if base_url is not None else settings.ollama_base_url
+        actual_model_name = model_name if model_name is not None else settings.ollama_model
+        actual_username = username if username is not None else settings.ollama_username
+        actual_password = password if password is not None else settings.ollama_password
+
+        # Mantém espaços intencionais em uma credencial válida, mas evita que
+        # valores compostos apenas por espaços ativem Basic Auth por engano.
+        actual_username = (
+            actual_username if actual_username and actual_username.strip() else None
+        )
+        actual_password = (
+            actual_password if actual_password and actual_password.strip() else None
+        )
+
+        if bool(actual_username) != bool(actual_password):
+            raise ValueError(
+                "OLLAMA_USERNAME e OLLAMA_PASSWORD devem ser configurados juntos."
+            )
+
+        self._base_url = actual_base_url.rstrip("/")
+        self._model_name = actual_model_name
         self._timeout = timeout
-        self._client = httpx.AsyncClient(timeout=timeout)
+        self._auth = (
+            httpx.BasicAuth(actual_username, actual_password)
+            if actual_username and actual_password
+            else None
+        )
+        if self._auth and self._base_url.lower().startswith("http://"):
+            logger.warning(
+                "Basic Auth do Ollama está configurado sobre HTTP sem criptografia; "
+                "use HTTPS para um gateway remoto."
+            )
+        self._client = httpx.AsyncClient(timeout=timeout, auth=self._auth)
     
     @property
     def name(self) -> Literal["ollama", "huggingface"]:
@@ -155,6 +186,12 @@ class OllamaProvider(LLMProvider):
                     "stream": False,  # Resposta completa de uma vez
                 },
             )
+
+            if response.status_code in {401, 403}:
+                raise ProviderNotAvailableError(
+                    "O gateway Ollama rejeitou a autenticação. "
+                    "Verifique OLLAMA_USERNAME e OLLAMA_PASSWORD."
+                )
             
             if response.status_code == 404:
                 raise ModelNotFoundError(
@@ -184,6 +221,13 @@ class OllamaProvider(LLMProvider):
         try:
             # Verifica se o servidor está rodando
             response = await self._client.get(f"{self._base_url}/api/tags")
+            if response.status_code in {401, 403}:
+                logger.warning(
+                    "Autenticação do gateway Ollama falhou no health check "
+                    "(HTTP %s).",
+                    response.status_code,
+                )
+                return False
             if response.status_code != 200:
                 return False
             

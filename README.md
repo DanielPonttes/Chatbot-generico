@@ -151,6 +151,8 @@ Variaveis principais:
 | `GEMINI_MODEL` | Modelo Gemini padrao, como `gemini-3-flash-preview`. |
 
 | `OLLAMA_BASE_URL` | URL do Ollama (local ou remoto). Veja `docs/setup/ollama_remote.md` se for em outra máquina. |
+| `OLLAMA_USERNAME` | Usuário Basic Auth do gateway Ollama remoto, se protegido. |
+| `OLLAMA_PASSWORD` | Senha Basic Auth do gateway Ollama remoto; mantenha somente no backend. |
 | `OLLAMA_MODEL` | Modelo local padrão: `gemma4:26b` (Gemma 4 26B A4B). A variante `gemma4:26b-a4b-it-qat` é uma opção mais econômica em VRAM. |
 | `HF_TOKEN` | Token HuggingFace. |
 

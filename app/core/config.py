@@ -35,6 +35,12 @@ class Settings(BaseSettings):
     # ==========================================
     ollama_base_url: str = "http://localhost:11434"
     """URL base do servidor Ollama local."""
+
+    ollama_username: str | None = None
+    """Usuário Basic Auth do gateway Ollama, quando o endpoint é protegido."""
+
+    ollama_password: str | None = None
+    """Senha Basic Auth do gateway Ollama; nunca deve ir para o frontend."""
     
     ollama_model: str = "qwen3.5:4b"
     """

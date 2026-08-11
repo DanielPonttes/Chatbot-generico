@@ -15,6 +15,9 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    # Mesmo GID do grupo host procelbot-context, configurável no .env do compose.
+    group_add:
+      - "${CANONICAL_SNAPSHOT_GID:-1100}"
     mem_limit: 2g
     cpus: "2.0"
     env_file:
@@ -24,6 +27,8 @@ services:
       PYTHONDONTWRITEBYTECODE: "1"
       NODE_METRICS_PATH: /run/procelbot/node-metrics/latest.json
       NODE_METRICS_MAX_AGE_SECONDS: "60"
+      CANONICAL_CONTEXT_SOURCE: snapshot
+      CANONICAL_SNAPSHOT_PATH: /run/procelbot/canonical-context/latest.json
     expose:
       - "8000"
     tmpfs:
@@ -32,6 +37,8 @@ services:
       - procelbot_chatbot_data:/app/data
       # Snapshot gerado pelo agente do host; o backend só precisa ler.
       - /var/lib/procelbot/node-metrics:/run/procelbot/node-metrics:ro
+      # Contexto sanitizado; a credencial PostgreSQL não entra no container.
+      - /var/lib/procelbot/canonical-context:/run/procelbot/canonical-context:ro
     networks:
       procelbot_internal:
         aliases:

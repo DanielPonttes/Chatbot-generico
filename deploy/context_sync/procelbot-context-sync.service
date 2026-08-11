@@ -1,0 +1,29 @@
+[Unit]
+Description=Procelbot canonical context snapshot synchronizer
+After=network-online.target procelbot-context-tunnel.service
+Wants=network-online.target
+BindsTo=procelbot-context-tunnel.service
+Requires=procelbot-context-tunnel.service
+
+[Service]
+Type=simple
+User=procelbot-context
+Group=procelbot-context
+WorkingDirectory=/opt/procelbot-backend
+EnvironmentFile=/etc/procelbot/context-sync.env
+ExecStart=/opt/procelbot-backend/.venv/bin/python deploy/context_sync/procelbot_context_sync.py --output /var/lib/procelbot/canonical-context/latest.json --interval 60
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/procelbot/canonical-context
+CapabilityBoundingSet=
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

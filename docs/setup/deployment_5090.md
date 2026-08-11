@@ -133,6 +133,20 @@ O backend aceita o snapshot por até 60 segundos. Se o agente parar, o campo
 `node_metrics.fresh` ficará falso quando o último snapshot for lido pelo
 endpoint administrativo.
 
+## Ponte de contexto canônico
+
+O backend de produção não deve receber a credencial do PostgreSQL sem TLS.
+Instale a [ponte local de contexto canônico](canonical_snapshot_bridge.md): o
+sincronizador usa túnel SSH/VPN, transação `READ ONLY` e grava um snapshot
+sanitizado. O Compose monta esse snapshot como `:ro` e compartilha apenas o GID
+do grupo `procelbot-context`.
+
+Antes de recriar o backend, defina `CANONICAL_SNAPSHOT_GID` no arquivo
+`deploy/backend/.env` e remova `REMOTE_PG_PASSWORD` do `backend.env`. Se não
+existir acesso SSH/bastion ou VPN até a origem, mantenha os endpoints canônicos
+indisponíveis; não aponte o sincronizador diretamente para
+`187.77.58.122:4343` com `sslmode=disable`.
+
 ## Publicação
 
 Instale o unit file e suba o backend:

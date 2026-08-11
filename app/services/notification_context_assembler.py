@@ -77,6 +77,24 @@ class NotificationContextAssembler:
         room_id: str | None = None,
         sensor_external_id: str | None = None,
     ) -> AssembledNotificationContext:
+        with self.context_service.consistent_view():
+            return self._assemble(
+                provided_context=provided_context,
+                allowed_fields=allowed_fields,
+                pessoa_id=pessoa_id,
+                room_id=room_id,
+                sensor_external_id=sensor_external_id,
+            )
+
+    def _assemble(
+        self,
+        *,
+        provided_context: dict[str, Any] | None,
+        allowed_fields: Iterable[str],
+        pessoa_id: str | None = None,
+        room_id: str | None = None,
+        sensor_external_id: str | None = None,
+    ) -> AssembledNotificationContext:
         if not any((pessoa_id, room_id, sensor_external_id)):
             raise NotificationContextSelectionError(
                 "use_canonical_context exige pessoa_id, room_id ou sensor_external_id."

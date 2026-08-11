@@ -8,6 +8,7 @@ consultada através do catálogo existente, com limites e freshness explícitos.
 from __future__ import annotations
 
 import logging
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any, Callable
 
@@ -15,6 +16,10 @@ from app.core.config import settings
 from app.services.integration_catalog import (
     RemoteDatabaseError,
     get_remote_postgres_catalog_service,
+)
+from app.services.canonical_snapshot import (
+    CanonicalSnapshotError,
+    CanonicalSnapshotRepository,
 )
 
 logger = logging.getLogger(__name__)
@@ -39,6 +44,11 @@ def _utcnow() -> datetime:
 def _as_utc(value: Any) -> datetime | None:
     if value is None:
         return None
+    if isinstance(value, str):
+        try:
+            value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
     if not isinstance(value, datetime):
         return None
     if value.tzinfo is None:
@@ -58,28 +68,68 @@ def _json_value(value: Any) -> Any:
 class CanonicalContextService:
     """Monta envelopes canônicos sem expor PII desnecessária."""
 
-    source_name = "postgresql"
-
     def __init__(self, db_service=None, clock: Callable[[], datetime] | None = None) -> None:
-        self.db_service = db_service or get_remote_postgres_catalog_service()
+        if db_service is not None:
+            self.db_service = db_service
+        elif settings.canonical_context_source == "snapshot":
+            self.db_service = CanonicalSnapshotRepository()
+        else:
+            self.db_service = get_remote_postgres_catalog_service()
+        self.source_name = getattr(self.db_service, "source_name", "postgresql")
         self.clock = clock or _utcnow
 
+    def _snapshot_observed_at(self, fallback: datetime) -> datetime:
+        snapshot_clock = getattr(self.db_service, "snapshot_generated_at", None)
+        if snapshot_clock is None:
+            return fallback
+        value = _as_utc(snapshot_clock())
+        if value is None:
+            raise CanonicalContextSourceError(
+                "O snapshot canônico não possui timestamp de geração válido."
+            )
+        return value
+
+    @contextmanager
+    def consistent_view(self):
+        view = getattr(self.db_service, "consistent_view", None)
+        if view is None:
+            yield
+            return
+        with view():
+            yield
+
     def _call(self, operation: str, callback: Callable[[], Any]) -> Any:
-        if settings.remote_pg_sslmode not in {"require", "verify-ca", "verify-full"}:
+        if (
+            self.source_name == "postgresql"
+            and settings.remote_pg_sslmode not in {"require", "verify-ca", "verify-full"}
+        ):
             raise CanonicalContextSourceError(
                 "O contexto canônico exige TLS (require, verify-ca ou verify-full)."
             )
         try:
             return callback()
         except RemoteDatabaseError as exc:
-            logger.warning("Fonte canônica indisponível durante %s: %s", operation, exc)
+            logger.warning(
+                "Fonte canônica indisponível durante %s: %s",
+                operation,
+                type(exc).__name__,
+            )
             raise CanonicalContextSourceError(
                 "A fonte PostgreSQL não está disponível para o contexto solicitado."
             ) from exc
-        except Exception as exc:
-            logger.warning("Falha na fonte canônica durante %s: %s", operation, exc)
+        except CanonicalSnapshotError as exc:
+            logger.warning("Snapshot canônico indisponível durante %s: %s", operation, exc)
             raise CanonicalContextSourceError(
-                "A fonte PostgreSQL não respondeu ao contexto solicitado."
+                "O snapshot canônico não está disponível para o contexto solicitado."
+            ) from exc
+        except Exception as exc:
+            logger.warning(
+                "Falha na fonte canônica durante %s: %s",
+                operation,
+                type(exc).__name__,
+            )
+            raise CanonicalContextSourceError(
+                "A fonte canônica não respondeu ao contexto solicitado."
             ) from exc
 
     def _metadata(
@@ -134,7 +184,11 @@ class CanonicalContextService:
 
         # O perfil canônico não carrega e-mail, telefone, senha ou matrícula.
         return {
-            "metadata": self._metadata(f"user:{pessoa_id}", fetched_at, fetched_at),
+            "metadata": self._metadata(
+                f"user:{pessoa_id}",
+                fetched_at,
+                self._snapshot_observed_at(fetched_at),
+            ),
             "data": {
                 "user_id": str(row["id"]),
                 "display_name": row.get("nome") or None,
@@ -180,7 +234,11 @@ class CanonicalContextService:
         # A consulta é um snapshot atual; os timestamps dos eventos ficam nos
         # itens e não tornam a lista inteira stale apenas por serem históricos.
         return {
-            "metadata": self._metadata(f"user:{pessoa_id}:activities", fetched_at, fetched_at),
+            "metadata": self._metadata(
+                f"user:{pessoa_id}:activities",
+                fetched_at,
+                self._snapshot_observed_at(fetched_at),
+            ),
             "data": {
                 "user_id": pessoa_id,
                 "items": items,
@@ -244,6 +302,10 @@ class CanonicalContextService:
         )
 
     def room_presence(self, room_id: str) -> dict[str, Any]:
+        with self.consistent_view():
+            return self._room_presence(room_id)
+
+    def _room_presence(self, room_id: str) -> dict[str, Any]:
         fetched_at = self.clock()
         room = self._call("sala-presença", lambda: self.db_service.fetch_room_by_id(room_id))
         if room is None:
@@ -280,7 +342,7 @@ class CanonicalContextService:
         elif latest_event_at is not None and latest_event_at > fetched_at:
             observed_at = latest_event_at
         else:
-            observed_at = fetched_at
+            observed_at = self._snapshot_observed_at(fetched_at)
 
         return {
             "metadata": self._metadata(f"room:{room_id}:presence", fetched_at, observed_at),
@@ -305,7 +367,9 @@ class CanonicalContextService:
             lambda: self.db_service.fetch_canonical_missions(active_only, safe_limit),
         )
         return {
-            "metadata": self._metadata("missions", fetched_at, fetched_at),
+            "metadata": self._metadata(
+                "missions", fetched_at, self._snapshot_observed_at(fetched_at)
+            ),
             "data": {
                 "active_only": active_only,
                 "items": [
@@ -338,7 +402,11 @@ class CanonicalContextService:
             lambda: self.db_service.fetch_canonical_parameter_definitions(active_only, safe_limit),
         )
         return {
-            "metadata": self._metadata("rules:parameter-definitions", fetched_at, fetched_at),
+            "metadata": self._metadata(
+                "rules:parameter-definitions",
+                fetched_at,
+                self._snapshot_observed_at(fetched_at),
+            ),
             "data": {
                 "active_only": active_only,
                 "items": [

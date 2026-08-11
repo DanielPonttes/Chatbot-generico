@@ -209,6 +209,15 @@ class Settings(BaseSettings):
     context_max_items: int = 100
     """Limite máximo de itens retornados pelos contratos canônicos de contexto."""
 
+    canonical_context_source: Literal["postgresql", "snapshot"] = "postgresql"
+    """Origem dos contratos canônicos: conexão direta ou snapshot local sanitizado."""
+
+    canonical_snapshot_path: str = "/run/procelbot/canonical-context/latest.json"
+    """Snapshot produzido fora do container, montado em modo somente leitura."""
+
+    canonical_snapshot_max_bytes: int = 4 * 1024 * 1024
+    """Tamanho máximo aceito para o snapshot canônico local."""
+
     # ==========================================
     # Integrações Externas - Spring Boot
     # ==========================================

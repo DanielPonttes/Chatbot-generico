@@ -603,13 +603,21 @@ def _probe_external_components() -> dict[str, str]:
     """
     components: dict[str, str] = {}
 
-    try:
-        get_remote_postgres_catalog_service().health()
-        # O liveness público não deve revelar o nome do banco remoto.
-        components["database"] = "connected"
-    except Exception as exc:
-        logger.warning("Database health probe failed: %s", exc)
-        components["database"] = "unavailable"
+    if settings.canonical_context_source == "snapshot":
+        try:
+            snapshot_status = get_canonical_context_service().missions(limit=1)["metadata"]
+            components["database"] = f"snapshot_{snapshot_status['status']}"
+        except Exception as exc:
+            logger.warning("Canonical snapshot health probe failed: %s", type(exc).__name__)
+            components["database"] = "snapshot_unavailable"
+    else:
+        try:
+            get_remote_postgres_catalog_service().health()
+            # O liveness público não deve revelar o nome do banco remoto.
+            components["database"] = "connected"
+        except Exception as exc:
+            logger.warning("Database health probe failed: %s", exc)
+            components["database"] = "unavailable"
 
     try:
         spring_info = get_spring_api_catalog_service().get_connection_info()

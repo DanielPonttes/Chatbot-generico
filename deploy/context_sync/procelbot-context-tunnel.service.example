@@ -1,0 +1,24 @@
+[Unit]
+Description=Encrypted tunnel for Procelbot canonical context sync
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=procelbot-context
+Group=procelbot-context
+EnvironmentFile=/etc/procelbot/context-tunnel.env
+ExecStart=/usr/bin/ssh -NT -o ExitOnForwardFailure=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/etc/procelbot/context-sync/known_hosts -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -i ${SSH_KEY_PATH} -L 127.0.0.1:${LOCAL_PORT}:${DATABASE_HOST}:${DATABASE_PORT} ${SSH_USER}@${SSH_HOST}
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+CapabilityBoundingSet=
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

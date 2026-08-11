@@ -224,6 +224,11 @@ chatbot até habilitar TLS ou um túnel privado. Se essas variáveis estiverem
 ausentes ou inacessíveis, o chat básico ainda pode funcionar, mas as rotas
 `/integrations/*` e `/context/*` retornarão erro de disponibilidade.
 
+Quando não for possível alterar o PostgreSQL remoto, use a
+[ponte local de snapshots canônicos](canonical_snapshot_bridge.md). Nesse modo,
+somente o sincronizador host recebe a credencial e o backend lê um arquivo
+sanitizado em modo read-only.
+
 
 
 ## Execucao

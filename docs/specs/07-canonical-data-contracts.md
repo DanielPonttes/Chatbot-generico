@@ -135,3 +135,7 @@ opt-in. Nesse modo:
 O assembler não cria baseline, ranking, recompensas, progresso ou valores de
 consumo derivados. Essas variáveis continuam obrigatórias no payload até que
 exista fonte e regra canônica confirmada.
+
+Como alternativa à conexão direta, a [SPEC-008](08-canonical-snapshot-bridge.md)
+define uma ponte host isolada. Nesse modo, o backend lê um snapshot sanitizado
+e não recebe host, usuário ou senha do PostgreSQL.

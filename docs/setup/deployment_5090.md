@@ -249,6 +249,17 @@ curl --fail https://api.procel-chatbot.com/v1/personas \
 # https://admin.procel-chatbot.com/
 ```
 
+O time autorizado no Cloudflare Access também pode abrir o laboratório de
+notificações em:
+
+```text
+https://admin.procel-chatbot.com/notifications
+```
+
+O Studio usa contexto fictício e fixa `use_canonical_context=false`. Ele gera
+candidatas reais no modelo local e permite aprovar/reprovar a fila, mas não
+entrega push nem consulta o PostgreSQL remoto.
+
 O smoke público atual deve mostrar redirecionamento 302 para o Cloudflare
 Access quando não há sessão. Após o login autorizado, o painel deve carregar
 e consultar `/api/status` sem enviar a `ADMIN_API_KEY` ao navegador.

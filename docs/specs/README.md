@@ -28,7 +28,8 @@ o plano de rollback.
 | SPEC-005 | [Painel administrativo e Cloudflare Access](05-admin-panel-and-cloudflare-access.md) | Accepted |
 | SPEC-006 | [Catálogo de missões e geração dedicada](06-notification-mission-catalog-and-generation.md) | Accepted |
 | SPEC-007 | [Contratos canônicos de contexto](07-canonical-data-contracts.md) | In progress |
-| SPEC-008 | [Ponte local de snapshots canônicos](08-canonical-snapshot-bridge.md) | In progress |
+| SPEC-008 | [Ponte local de snapshots canônicos](08-canonical-snapshot-bridge.md) | Local complete; remote suspended |
+| SPEC-009 | [Notification Studio administrativo](09-notification-studio.md) | Accepted |
 
 ## Ordem da primeira etapa
 

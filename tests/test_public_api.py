@@ -1065,9 +1065,29 @@ def test_production_requires_postgres_tls(monkeypatch):
     monkeypatch.setattr(settings, "allowed_models", "")
     monkeypatch.setattr(settings, "allowed_hosts", "api.example")
     monkeypatch.setattr(settings, "trusted_proxy_networks", "127.0.0.1")
+    monkeypatch.setattr(settings, "canonical_context_source", "postgresql")
     monkeypatch.setattr(settings, "remote_pg_sslmode", "disable")
 
     with pytest.raises(RuntimeError, match="REMOTE_PG_SSLMODE=require"):
+        validate_runtime_security()
+
+
+def test_production_snapshot_mode_rejects_postgres_password_in_backend(monkeypatch):
+    monkeypatch.setattr(settings, "environment", "production")
+    monkeypatch.setattr(settings, "api_key", "publica")
+    monkeypatch.setattr(settings, "admin_api_key", "admin-secreta")
+    monkeypatch.setattr(settings, "cors_allow_origins", "https://app.example")
+    monkeypatch.setattr(settings, "rate_limit_per_minute", 60)
+    monkeypatch.setattr(settings, "legacy_routes_enabled", False)
+    monkeypatch.setattr(settings, "docs_public", False)
+    monkeypatch.setattr(settings, "allow_model_override", False)
+    monkeypatch.setattr(settings, "allowed_models", "")
+    monkeypatch.setattr(settings, "allowed_hosts", "api.example")
+    monkeypatch.setattr(settings, "trusted_proxy_networks", "127.0.0.1")
+    monkeypatch.setattr(settings, "canonical_context_source", "snapshot")
+    monkeypatch.setattr(settings, "remote_pg_password", "não-deve-entrar-no-backend")
+
+    with pytest.raises(RuntimeError, match="REMOTE_PG_PASSWORD ausente"):
         validate_runtime_security()
 
 

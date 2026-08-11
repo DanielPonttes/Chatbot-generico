@@ -7,6 +7,7 @@ valor que dependa de regra de negócio ainda não confirmada.
 
 from __future__ import annotations
 
+from contextlib import nullcontext
 from dataclasses import dataclass
 from typing import Any, Iterable
 
@@ -77,7 +78,8 @@ class NotificationContextAssembler:
         room_id: str | None = None,
         sensor_external_id: str | None = None,
     ) -> AssembledNotificationContext:
-        with self.context_service.consistent_view():
+        view = getattr(self.context_service, "consistent_view", None)
+        with view() if view is not None else nullcontext():
             return self._assemble(
                 provided_context=provided_context,
                 allowed_fields=allowed_fields,

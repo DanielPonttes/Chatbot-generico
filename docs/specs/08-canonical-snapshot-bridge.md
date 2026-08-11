@@ -55,6 +55,14 @@ matrícula ou linhas individuais de presença.
 - `generated_at` controla freshness. Sincronizador parado produz `stale`, nunca
   dados aparentemente atuais.
 
+### Risco residual da credencial existente
+
+`REPEATABLE READ, READ ONLY` protege a transação executada pelo código fixo,
+mas não transforma uma credencial superusuária em um papel limitado. A senha
+continua sendo um segredo de alto impacto, isolado no usuário/unit host e fora
+do chatbot. Criar um papel `SELECT` permanece a solução definitiva caso o
+responsável pelo banco passe a aceitar essa alteração.
+
 ## 5. Critérios de aceite
 
 - [x] Backend opera com `CANONICAL_CONTEXT_SOURCE=snapshot`.
@@ -67,6 +75,15 @@ matrícula ou linhas individuais de presença.
 - [x] Testes cobrem leitura, freshness, symlink, tamanho, permissões e transporte.
 - [ ] Túnel SSH/VPN provisionado e fingerprint verificado no host da RTX 5090.
 - [ ] Serviço publicado e sete endpoints validados no ambiente remoto.
+
+### Estado de implantação em 2026-08-11
+
+A chave SSH dedicada e as duas units foram instaladas no neuromancer. As units
+permanecem desativadas e não existe snapshot nem arquivo de credenciais. A
+ativação depende de o administrador confirmar o fingerprint do endpoint SSH e
+fornecer/criar uma conta restrita a encaminhamento para `127.0.0.1:4343`. Os
+detalhes públicos e a chave pública para autorização estão em
+[`docs/setup/canonical_snapshot_bridge.md`](../setup/canonical_snapshot_bridge.md#estado-preparado-no-neuromancer-em-2026-08-11).
 
 ## 6. Rollback
 

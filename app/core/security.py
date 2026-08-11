@@ -267,8 +267,13 @@ def validate_runtime_security() -> None:
         problems.append("DOCS_PUBLIC=false")
     if settings.allow_model_override and not settings.allowed_models.strip():
         problems.append("ALLOWED_MODELS quando ALLOW_MODEL_OVERRIDE=true")
-    if settings.remote_pg_sslmode not in {"require", "verify-ca", "verify-full"}:
+    if (
+        settings.canonical_context_source == "postgresql"
+        and settings.remote_pg_sslmode not in {"require", "verify-ca", "verify-full"}
+    ):
         problems.append("REMOTE_PG_SSLMODE=require/verify-ca/verify-full")
+    if settings.canonical_context_source == "snapshot" and settings.remote_pg_password:
+        problems.append("REMOTE_PG_PASSWORD ausente no backend em modo snapshot")
     allowed_hosts = _csv_values(settings.allowed_hosts)
     if not allowed_hosts or "*" in allowed_hosts:
         problems.append("ALLOWED_HOSTS explícito e não vazio")

@@ -27,6 +27,41 @@ CANONICAL_SNAPSHOT_GID=1100
 
 ## 2. Transporte criptografado
 
+### Estado preparado no neuromancer em 2026-08-11
+
+Os componentes locais foram preparados, mas permanecem desativados até o
+administrador fornecer ou criar uma conta SSH dedicada no servidor que atende
+em `187.77.58.122:22`:
+
+- usuário e grupo de serviço: `procelbot-context`, GID `1100`;
+- chave privada: `/etc/procelbot/context-sync/id_ed25519`, proprietário
+  `procelbot-context:procelbot-context`, modo `0600`;
+- chave pública: `/etc/procelbot/context-sync/id_ed25519.pub`, modo `0644`;
+- fingerprint da chave pública do sincronizador:
+  `SHA256:ylSFndeKM1aFuLApQjE9qLjrRl5B3R1SYIoif/cqu1g`;
+- endpoint PostgreSQL alcançável pelo host: `187.77.58.122:4343`;
+- porta local reservada para o túnel: `127.0.0.1:5433`;
+- units `procelbot-context-tunnel` e `procelbot-context-sync`: instaladas e
+  desativadas;
+- usuário SSH remoto: ainda não identificado;
+- snapshot e arquivos de ambiente com credenciais: ainda não criados.
+
+A chave pública que pode ser entregue ao administrador é:
+
+```text
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILZDXB7At+NGHa8+tBqc4fwPiSfO8wLdVspjGf8GY2rB procelbot-context-sync@neuromancer
+```
+
+Solicite uma conta sem senha e sem shell interativo, autorizada somente para
+port forwarding local até `127.0.0.1:4343`. O fingerprint ED25519 observado no
+endpoint SSH foi
+`SHA256:OemN6kyXXqDnAvM4vz6XnpCdD/FcoaTNcplrniroHOI`; ele é apenas uma
+observação inicial e deve ser confirmado com o administrador por outro canal
+antes de entrar em `known_hosts`.
+
+Não coloque a chave privada, senhas ou credenciais PostgreSQL na documentação,
+no repositório ou em `context-tunnel.env`.
+
 Copie os exemplos sem preencher credenciais no repositório:
 
 ```bash
@@ -45,7 +80,8 @@ obtido após confirmar o fingerprint com o responsável pelo host SSH. A chave
 deve permitir apenas port forwarding quando o servidor SSH suportar essa
 restrição.
 
-Preencha `/etc/procelbot/context-tunnel.env` e valide:
+Preencha o `SSH_USER` em `/etc/procelbot/context-tunnel.env` somente depois que
+a conta dedicada for confirmada. Então valide:
 
 ```bash
 sudo systemctl daemon-reload
@@ -99,6 +135,11 @@ inferior a 4 MiB. Depois:
 ```bash
 sudo systemctl enable --now procelbot-context-sync.service
 ```
+
+A transação `READ ONLY` limita o sincronizador, mas a credencial original ainda
+é privilegiada. Não a reutilize em scripts, no container ou em sessões
+interativas; rotacione-a com o responsável pela origem se houver suspeita de
+exposição.
 
 ## 4. Backend sem credencial remota
 

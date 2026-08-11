@@ -12,6 +12,7 @@ import argparse
 import json
 import logging
 import os
+import sys
 import tempfile
 import time
 from ipaddress import ip_address
@@ -19,6 +20,12 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
+
+# Execução direta define sys.path para deploy/context_sync; inclua a raiz do
+# checkout antes de importar o pacote da aplicação.
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
 
 from app.core.config import settings
 from app.services.canonical_snapshot import SNAPSHOT_SCHEMA_VERSION

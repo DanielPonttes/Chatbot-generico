@@ -2,7 +2,10 @@
 
 import json
 import stat
+import subprocess
+import sys
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 
@@ -76,6 +79,7 @@ def _snapshot(generated_at=NOW):
 
 def _write(path, payload):
     path.write_text(json.dumps(payload), encoding="utf-8")
+    path.chmod(0o640)
 
 
 def test_snapshot_repository_serves_sanitized_contracts(tmp_path):
@@ -139,6 +143,51 @@ def test_snapshot_reader_rejects_symlink_and_oversized_file(tmp_path):
         )
 
 
+def test_snapshot_reader_rejects_world_readable_file(tmp_path):
+    path = tmp_path / "latest.json"
+    _write(path, _snapshot())
+    path.chmod(0o644)
+
+    with pytest.raises(CanonicalSnapshotError, match="permissões"):
+        CanonicalSnapshotRepository(path).fetch_canonical_user_profile("user-1")
+
+
+def test_consistent_view_pins_one_generation_during_replace(tmp_path):
+    path = tmp_path / "latest.json"
+    first = _snapshot()
+    second = _snapshot(NOW + timedelta(minutes=1))
+    second["presence_by_room"]["room-1"]["occupied_count"] = 0
+    _write(path, first)
+    repository = CanonicalSnapshotRepository(path)
+
+    with repository.consistent_view():
+        room = repository.fetch_room_by_id("room-1")
+        replacement = tmp_path / "replacement.json"
+        _write(replacement, second)
+        replacement.replace(path)
+        presence = repository.fetch_canonical_presence("room-1")
+
+    assert room["nome"] == "Sala"
+    assert presence["occupied_count"] == 1
+    assert repository.fetch_canonical_presence("room-1")["occupied_count"] == 0
+
+
+def test_future_snapshot_is_stale_with_clock_skew(tmp_path, monkeypatch):
+    path = tmp_path / "latest.json"
+    _write(path, _snapshot(NOW + timedelta(seconds=60)))
+    monkeypatch.setattr(settings, "context_max_age_seconds", 300)
+    service = CanonicalContextService(
+        db_service=CanonicalSnapshotRepository(path),
+        clock=lambda: NOW,
+    )
+
+    metadata = service.profile("user-1")["metadata"]
+
+    assert metadata["status"] == "stale"
+    assert metadata["fresh"] is False
+    assert metadata["clock_skew"] is True
+
+
 def test_missing_snapshot_maps_to_source_unavailable(tmp_path):
     service = CanonicalContextService(
         db_service=CanonicalSnapshotRepository(tmp_path / "missing.json"),
@@ -163,7 +212,7 @@ class FakeCursor:
     def execute(self, query, params=()):
         normalized = " ".join(str(query).split()).casefold()
         self.queries.append(normalized)
-        if normalized == "set transaction read only":
+        if normalized == "set transaction isolation level repeatable read, read only":
             self.rows = []
         elif "from public.pessoa" in normalized:
             self.rows = [{"id": "user-1", "nome": "Pessoa", "email": "não consultado"}]
@@ -213,7 +262,10 @@ def test_export_is_read_only_and_snapshot_has_no_connection_secrets():
 
     snapshot = sync.export_snapshot(service)
 
-    assert service.cursor.queries[0] == "set transaction read only"
+    assert service.cursor.queries[0] == (
+        "set transaction isolation level repeatable read, read only"
+    )
+    assert sum("partition by ativo" in query for query in service.cursor.queries) == 2
     assert snapshot["source"] == {"kind": "postgresql_read_only_export"}
     serialized = json.dumps(snapshot)
     for forbidden in ("password", "remote_pg_host", "remote_pg_user", "telefone"):
@@ -228,6 +280,17 @@ def test_snapshot_writer_is_atomic_and_group_read_only(tmp_path):
     assert json.loads(output.read_text(encoding="utf-8"))["schema_version"] == 1
     assert stat.S_IMODE(output.stat().st_mode) == 0o640
     assert not list(tmp_path.glob("*.tmp"))
+
+
+def test_snapshot_writer_refuses_oversized_payload_without_replacing_last_good(tmp_path):
+    output = tmp_path / "latest.json"
+    sync.write_snapshot(_snapshot(), output)
+    original = output.read_bytes()
+
+    with pytest.raises(ValueError, match="excede"):
+        sync.write_snapshot({**_snapshot(), "large": "x" * 2048}, output, max_bytes=1024)
+
+    assert output.read_bytes() == original
 
 
 def test_sync_refuses_insecure_non_loopback_transport(monkeypatch):
@@ -263,3 +326,30 @@ def test_health_uses_snapshot_without_probing_remote_database(monkeypatch):
     components = routes._probe_external_components()
 
     assert components["database"] == "snapshot_fresh"
+
+
+def test_backend_production_example_contains_no_postgres_credentials():
+    example = (
+        Path(__file__).parents[1] / "deploy/backend/backend.env.example"
+    ).read_text(encoding="utf-8")
+
+    assert "REMOTE_PG_PASSWORD=" not in example
+
+
+def test_context_sync_script_runs_directly_outside_repository(tmp_path):
+    script = (
+        Path(__file__).parents[1]
+        / "deploy/context_sync/procelbot_context_sync.py"
+    )
+
+    completed = subprocess.run(
+        [sys.executable, str(script), "--help"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert "--output" in completed.stdout

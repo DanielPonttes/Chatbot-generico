@@ -113,33 +113,100 @@ http://admin.procel-chatbot.com {
     route {
         respond @admin_without_access 403
 
-        @admin_status path /api/status
+        @admin_status {
+            method GET
+            path /api/status
+        }
         handle @admin_status {
             rewrite * /v1/admin/status
             reverse_proxy chatbot:8000 {
                 header_up -Cookie
                 header_up -Authorization
+                header_up -Cf-Access-Jwt-Assertion
                 header_up Host api.procel-chatbot.com
                 header_up X-API-Key {$PROCELBOT_ADMIN_API_KEY}
             }
         }
 
-        @admin_openapi path /openapi.json
+        # Notification Studio: catálogo, geração manual e revisão ficam atrás
+        # do Access. A chave administrativa é injetada apenas no upstream e a
+        # allowlist não expõe chat genérico, integrações ou contexto canônico.
+        @notification_catalog {
+            method GET
+            path /v1/personas /v1/target-profiles /v1/notifications/missions /v1/notifications/types /v1/notifications/saved
+        }
+        handle @notification_catalog {
+            reverse_proxy chatbot:8000 {
+                header_up -Cookie
+                header_up -Authorization
+                header_up -Cf-Access-Jwt-Assertion
+                header_up Host api.procel-chatbot.com
+                header_up X-API-Key {$PROCELBOT_ADMIN_API_KEY}
+            }
+        }
+
+        @notification_generate {
+            method POST
+            path /v1/notifications/generate
+        }
+        handle @notification_generate {
+            reverse_proxy chatbot:8000 {
+                header_up -Cookie
+                header_up -Authorization
+                header_up -Cf-Access-Jwt-Assertion
+                header_up Host api.procel-chatbot.com
+                header_up X-API-Key {$PROCELBOT_ADMIN_API_KEY}
+            }
+        }
+
+        @notification_review {
+            method PATCH
+            path /v1/notifications/saved/*
+        }
+        handle @notification_review {
+            reverse_proxy chatbot:8000 {
+                header_up -Cookie
+                header_up -Authorization
+                header_up -Cf-Access-Jwt-Assertion
+                header_up Host api.procel-chatbot.com
+                header_up X-API-Key {$PROCELBOT_ADMIN_API_KEY}
+            }
+        }
+
+        @notification_studio {
+            method GET HEAD
+            path /notifications
+        }
+        handle @notification_studio {
+            rewrite * /notifications.html
+            root * /srv/admin
+            file_server
+        }
+
+        @admin_openapi {
+            method GET
+            path /openapi.json
+        }
         handle @admin_openapi {
             reverse_proxy chatbot:8000 {
                 header_up -Cookie
                 header_up -Authorization
+                header_up -Cf-Access-Jwt-Assertion
                 header_up Host api.procel-chatbot.com
                 header_up X-API-Key {$PROCELBOT_API_KEY}
             }
         }
 
-        @admin_swagger path /swagger
+        @admin_swagger {
+            method GET
+            path /swagger
+        }
         handle @admin_swagger {
             rewrite * /docs
             reverse_proxy chatbot:8000 {
                 header_up -Cookie
                 header_up -Authorization
+                header_up -Cf-Access-Jwt-Assertion
                 header_up Host api.procel-chatbot.com
                 header_up X-API-Key {$PROCELBOT_API_KEY}
             }
@@ -147,5 +214,6 @@ http://admin.procel-chatbot.com {
 
         root * /srv/admin
         file_server
+        respond 404
     }
 }

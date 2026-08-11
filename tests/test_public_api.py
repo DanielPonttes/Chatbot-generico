@@ -701,6 +701,43 @@ def test_notification_generation_resolves_mission_template(
     assert generator.await_args.kwargs["notification_type_id"] == "feedback_alerta_consumo"
 
 
+def test_notification_generation_fails_if_candidate_is_not_persisted(
+    client,
+    monkeypatch,
+    patched_services,
+):
+    generated = ProactiveMessageResult(
+        message="Candidata que não deve ser retornada como salva.",
+        context_summary=None,
+        prompt_used="prompt de teste",
+    )
+    monkeypatch.setattr(
+        routes.PersonaService,
+        "generate_proactive_message",
+        AsyncMock(return_value=generated),
+    )
+    monkeypatch.setattr(routes, "save_notification", lambda _: False)
+
+    response = client.post(
+        "/v1/notifications/generate",
+        json={
+            "mission_id": "sala_vazia_luz_off",
+            "persona_id": "motivador",
+            "notification_context": {
+                "anomaly_window": "últimas 2 horas",
+                "measured_consumption_kwh": 8.4,
+                "expected_consumption_kwh": 5.2,
+                "room_id": "sala-demo-204",
+                "potential_wasted_kwh": 3.2,
+                "recommended_action": "apagar a iluminação",
+            },
+        },
+    )
+
+    assert response.status_code == 500
+    assert response.json()["detail"]["error"] == "notification_persistence_failed"
+
+
 def test_notification_generation_rejects_catalog_only_mission(client):
     response = client.post(
         "/v1/notifications/generate",

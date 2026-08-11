@@ -556,7 +556,14 @@ async def chat_proactive(request: ProactiveChatRequest) -> ChatResponse:
         })
 
         if not saved:
-            logger.warning(f"Não foi possível persistir notificação proativa id={notification_id}")
+            logger.error("Não foi possível persistir notificação proativa id=%s", notification_id)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={
+                    "error": "notification_persistence_failed",
+                    "message": "A candidata foi gerada, mas não pôde ser salva para revisão.",
+                },
+            )
 
         return ChatResponse(
             session_id=notification_id,
@@ -581,6 +588,8 @@ async def chat_proactive(request: ProactiveChatRequest) -> ChatResponse:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": "validation_error", "message": str(e)},
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception(f"Error in proactive chat: {e}")
         raise HTTPException(

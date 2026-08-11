@@ -1,6 +1,6 @@
 # SPEC-008 — Ponte local de snapshots canônicos
 
-**Status:** In progress — implementação local concluída; ativação depende de túnel SSH/VPN  
+**Status:** Implementação e diagnóstico concluídos; ativação remota suspensa
 **Base:** SPEC-007  
 **Escopo:** remover credenciais PostgreSQL do chatbot sem alterar o banco remoto
 
@@ -84,6 +84,15 @@ ativação depende de o administrador confirmar o fingerprint do endpoint SSH e
 fornecer/criar uma conta restrita a encaminhamento para `127.0.0.1:4343`. Os
 detalhes públicos e a chave pública para autorização estão em
 [`docs/setup/canonical_snapshot_bridge.md`](../setup/canonical_snapshot_bridge.md#estado-preparado-no-neuromancer-em-2026-08-11).
+
+Uma auditoria final, sem leitura de linhas, confirmou em transação
+`REPEATABLE READ, READ ONLY` que todas as nove tabelas-fonte existem e permitem
+`SELECT`. A transação terminou com `ROLLBACK`. O mesmo diagnóstico reconfirmou
+`ssl=off` e que a conta disponível é superusuária. A etapa de validação da
+origem está encerrada; não haverá conexão contínua nem publicação dos endpoints
+dependentes enquanto o proprietário do servidor não oferecer transporte seguro
+ou uma exportação sanitizada. As contagens agregadas estão registradas no
+[`docs/plans/08-canonical-data-contracts.md`](../plans/08-canonical-data-contracts.md#auditoria-sanitizada-de-encerramento--2026-08-11).
 
 ## 6. Rollback
 

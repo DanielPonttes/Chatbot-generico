@@ -1,6 +1,6 @@
 # Plano 08 — Contratos canônicos de contexto do agente
 
-**Status:** Em implementação local — deploy bloqueado pelo gate de segurança da origem  
+**Status:** Validação read-only concluída — publicação suspensa por ausência de transporte seguro
 **Data:** 2026-08-11  
 **Base:** [SPEC-007](../specs/07-canonical-data-contracts.md)
 
@@ -26,6 +26,31 @@ estado de sensor.
   trafegam sem criptografia.
 - A credencial fornecida é superusuária (`SUPERUSER`, `CREATEROLE` e
   `CREATEDB`); ela não pode ser configurada no chatbot.
+
+### Auditoria sanitizada de encerramento — 2026-08-11
+
+Foi executada uma única auditoria operacional com timeout de 5 segundos em uma
+transação `REPEATABLE READ, READ ONLY`, encerrada explicitamente com `ROLLBACK`.
+Nenhuma linha, identificador pessoal ou valor de coluna foi retornado. O teste
+confirmou `transaction_read_only=on`, `ssl=off` e permissão `SELECT` nas nove
+tabelas necessárias:
+
+| Tabela | Contagem agregada |
+| --- | ---: |
+| `pessoa` | 2 |
+| `atividade` | 5 |
+| `missao` | 33 |
+| `compartimento` | 2068 |
+| `sensor` | 2 |
+| `medicao` | 61 |
+| `parametro_def` | 11 |
+| `parametro_valor` | 671 |
+| `presenca` | 1 |
+
+A auditoria também reconfirmou que a conta disponível possui `SUPERUSER`,
+`CREATEROLE` e `CREATEDB`. Isso encerra a validação estrutural e de leitura da
+origem, mas não autoriza sincronização contínua: o tráfego permanece sem TLS e
+o servidor não está sob administração do operador do chatbot.
 
 ## Mapa preliminar de fontes
 
@@ -80,6 +105,7 @@ nas tabelas necessárias. O chatbot não deve receber a senha do DBA.
 
 ## Próxima ação operacional
 
-Corrigir o transporte seguro e provisionar a credencial limitada; depois
-recriar somente o container `procelbot-chatbot`, validar os sete contratos e
-executar a revisão automatizada e os smoke tests do assembler já integrado.
+A etapa de diagnóstico está encerrada. Não repetir consultas diretas como rotina.
+Se o proprietário da origem futuramente fornecer TLS, túnel/VPN, API HTTPS ou
+snapshot sanitizado, habilitar a ponte e então recriar somente o container
+`procelbot-chatbot` para validar os sete contratos no ambiente remoto.

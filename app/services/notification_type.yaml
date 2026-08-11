@@ -7,6 +7,8 @@ notification_types:
   - id: reengajamento_streak
     name: "Alerta de Risco de Streak"
     description: "Ativa aversão à perda para usuários prestes a quebrar uma sequência de dias."
+    category: "Reengajamento"
+    subtype: "Alerta de Risco de Streak"
     default_use_rag: false
     required_context_vars:
       - streak_days
@@ -35,6 +37,8 @@ notification_types:
   - id: reengajamento_cofre
     name: "Pontos a Expirar"
     description: "Traz usuário inativo lembrando do valor acumulado com urgência de expiração."
+    category: "Reengajamento"
+    subtype: "Atualização do Cofre / Pontos a Expirar"
     default_use_rag: false
     required_context_vars:
       - coins_amount
@@ -65,6 +69,8 @@ notification_types:
   - id: reengajamento_winback
     name: "Surpresa de Retorno"
     description: "Reativa usuários frios com novidade do app e recompensa imediata."
+    category: "Reengajamento"
+    subtype: "Surpresa de Retorno"
     default_use_rag: true
     required_context_vars:
       - new_feature_name
@@ -98,6 +104,8 @@ notification_types:
   - id: social_ranking
     name: "Posição no Ranking"
     description: "Motiva usuários competitivos comparando sua posição com grupos semelhantes."
+    category: "Social e Competição"
+    subtype: "Posição no Ranking"
     default_use_rag: false
     required_context_vars:
       - positions_gained
@@ -130,6 +138,8 @@ notification_types:
   - id: social_desafio_cooperativo
     name: "Desafio Cooperativo"
     description: "Engaja o usuário em metas coletivas usando responsabilidade compartilhada."
+    category: "Social e Competição"
+    subtype: "Desafio Cooperativo"
     default_use_rag: false
     required_context_vars:
       - saving_goal_percent
@@ -166,6 +176,8 @@ notification_types:
   - id: conquista_badge
     name: "Desbloqueio de Conquista"
     description: "Celebra uma badge ou marco atingido, gerando reforço positivo do hábito."
+    category: "Conquistas e Progresso"
+    subtype: "Desbloqueio de Conquista / Badge Alcançado"
     default_use_rag: false
     required_context_vars:
       - badge_name
@@ -197,6 +209,8 @@ notification_types:
   - id: conquista_impacto_ambiental
     name: "Relatório de Impacto Ambiental"
     description: "Traduz kWh economizados em métricas tangíveis e emocionais para fechamento de ciclo."
+    category: "Conquistas e Progresso"
+    subtype: "Relatório de Impacto Ambiental"
     default_use_rag: true
     required_context_vars:
       - period_label
@@ -234,6 +248,8 @@ notification_types:
   - id: missao_convite
     name: "Convite para Missão Diária/Semanal"
     description: "Cria micro-objetivo de curto prazo com senso de urgência e oportunidade imediata."
+    category: "Desafios e Missões"
+    subtype: "Convite para Missão Diária/Semanal"
     default_use_rag: false
     required_context_vars:
       - target_action
@@ -267,6 +283,8 @@ notification_types:
   - id: missao_status
     name: "Atualização de Status da Missão"
     description: "Mantém o usuário engajado no meio da missão, evitando abandono perto da conclusão."
+    category: "Desafios e Missões"
+    subtype: "Atualização de Status da Missão"
     default_use_rag: false
     required_context_vars:
       - mission_name
@@ -304,6 +322,8 @@ notification_types:
   - id: feedback_alerta_consumo
     name: "Alerta de Consumo Anômalo"
     description: "Alerta no momento exato da anomalia, mostrando que o sistema cuida ativamente do usuário."
+    category: "Feedback em Tempo Real"
+    subtype: "Alerta de Consumo Anômalo"
     default_use_rag: false
     required_context_vars:
       - anomaly_window
@@ -337,6 +357,8 @@ notification_types:
   - id: feedback_dica_contextual
     name: "Dica Contextual"
     description: "Usa dados externos (clima, contexto) para sugerir ação prática antes do erro de consumo."
+    category: "Feedback em Tempo Real"
+    subtype: "Dica Contextual"
     default_use_rag: true
     required_context_vars:
       - target_device

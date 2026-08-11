@@ -188,20 +188,24 @@ As rotas de catalogo e contexto operacional usam:
 
 ```env
 
-REMOTE_PG_HOST=srv1428963.hstgr.cloud
+REMOTE_PG_HOST=<postgres-host>
 
 REMOTE_PG_PORT=5432
 
-REMOTE_PG_USER=postgres
+REMOTE_PG_USER=<read-only-user>
 
 REMOTE_PG_PASSWORD=
 
 
-REMOTE_PG_SSLMODE=prefer
+REMOTE_PG_SSLMODE=require
 
 REMOTE_PG_CONNECT_TIMEOUT=5
 
 REMOTE_PG_MAX_LIMIT=100
+
+CONTEXT_MAX_AGE_SECONDS=300
+
+CONTEXT_MAX_ITEMS=100
 
 
 
@@ -213,7 +217,12 @@ REMOTE_SPRING_TIMEOUT_SECONDS=15
 
 
 
-Se essas variaveis estiverem ausentes ou inacessiveis, o chat basico ainda pode funcionar, mas as rotas `/integrations/*` e o contexto operacional real podem retornar erro de disponibilidade.
+Em produção, use uma credencial sem privilégios de criação e exija TLS. A
+origem analisada em 2026-08-11 respondeu PostgreSQL em uma porta customizada,
+mas estava com `ssl=off`; portanto ela não deve ser configurada com senha no
+chatbot até habilitar TLS ou um túnel privado. Se essas variáveis estiverem
+ausentes ou inacessíveis, o chat básico ainda pode funcionar, mas as rotas
+`/integrations/*` e `/context/*` retornarão erro de disponibilidade.
 
 
 

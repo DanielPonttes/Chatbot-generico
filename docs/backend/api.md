@@ -92,6 +92,82 @@ Lista perfis-alvo:
 - `indiferente`
 - `engajado`
 
+### `GET /notifications/types`
+
+Retorna os templates de notificação que o backend executa atualmente. O
+catálogo é a fonte de descoberta para `notification_type_id` e para as chaves
+obrigatórias de `notification_context`.
+
+Exemplo resumido:
+
+```json
+[
+  {
+    "id": "feedback_alerta_consumo",
+    "name": "Alerta de Consumo Anômalo",
+    "category": "Feedback em Tempo Real",
+    "subtype": "Alerta de Consumo Anômalo",
+    "default_use_rag": false,
+    "required_context_vars": [
+      "anomaly_window",
+      "measured_consumption_kwh",
+      "expected_consumption_kwh"
+    ],
+    "context_variables": [
+      "anomaly_percent",
+      "anomaly_window",
+      "expected_consumption_kwh",
+      "measured_consumption_kwh",
+      "recommended_action",
+      "room_id"
+    ]
+  }
+]
+```
+
+O catálogo não retorna o prompt interno. As missões do documento V3 usam o
+mesmo objeto de contexto extensível, mas só serão publicadas como IDs de
+missão executáveis depois que seus templates, fontes de dados e regras de
+disparo forem normalizados. O endpoint de catálogo já publica a matriz
+normalizada para integração; entradas sem template permanecem marcadas como
+`catalog_only` e não podem gerar notificações.
+
+### `GET /notifications/missions`
+
+Retorna as 64 missões normalizadas do documento V3. Cada missão informa
+`component_inputs`, `agent_inputs`, `context_variables`, `template_id` e
+`execution_status`. A consulta individual usa
+`GET /notifications/missions/{mission_id}`.
+
+### `POST /notifications/generate`
+
+Gera uma candidata a partir de `mission_id`, resolvendo automaticamente o
+template técnico associado. Missões `catalog_only` respondem `409`; contexto
+incompleto responde `400`. A saída mantém o formato de `ChatResponse` e a
+notificação é salva como `Pendente` para revisão humana.
+
+O campo opcional `use_canonical_context` ativa a resolução de `pessoa_id`,
+`room_id` e `sensor_external_id` pelos contratos canônicos. Esse modo exige a
+chave administrativa e uma origem PostgreSQL com TLS. Somente snapshots
+`fresh` são usados; valores enviados que divirjam da fonte retornam
+`409 canonical_context_conflict`. O assembler não inventa baseline, ranking,
+recompensa, progresso ou consumo ausente, e o contexto final continua limitado
+a 32 chaves e 8 KiB.
+
+Erros específicos desse modo:
+
+- `400 canonical_context_selector_required`: nenhum seletor canônico enviado;
+- `400 canonical_context_limits_exceeded`: merge acima de 32 chaves ou 8 KiB;
+- `404 context_not_found`: pessoa ou sala não encontrada;
+- `409 canonical_context_conflict`: input diverge da fonte;
+- `409 canonical_context_not_fresh`: snapshot `stale`, `empty` ou com clock skew;
+- `503 context_source_unavailable`: TLS ausente, timeout ou origem indisponível.
+
+Para evitar persistir PII ou telemetria, `prompt_used` fica nulo nas candidatas
+geradas com contexto canônico. O backend registra apenas o ID técnico da
+candidata, os nomes dos campos observados e os tipos de fonte, sem IDs de
+pessoa, sala ou sensor.
+
 ## Chat Proativo e Notificacoes
 
 ### `POST /chat/proactive`
@@ -128,7 +204,7 @@ Campos importantes:
 - `target_profile_id`: opcional.
 - `use_rag`: opcional. Se `null`, segue o `default_use_rag` do tipo YAML; sem tipo, o padrao legado e `true`.
 - `notification_type_id`: opcional. Deve existir em `app/services/notification_type.yaml`.
-- `notification_context`: opcional. Deve conter as variaveis obrigatorias do tipo escolhido.
+- `notification_context`: opcional. Deve conter as variáveis obrigatórias do tipo escolhido; consulte `/notifications/types`.
 - `room_id`, `sensor_external_id`, `pessoa_id`: opcionais para contexto operacional.
 
 Resposta:
@@ -146,8 +222,8 @@ Resposta:
 Falhas comuns:
 
 - persona inexistente: `404`.
-- tipo de notificacao inexistente: `404`.
-- variaveis obrigatorias ausentes no tipo: `404` com mensagem do `ValueError`.
+- tipo de notificação inexistente: `404` (`notification_type_not_found`).
+- variáveis obrigatórias ausentes no tipo: `400` (`validation_error`).
 - provider LLM indisponivel: `500` ou `503`, dependendo da origem.
 
 ### `GET /notifications/saved`
@@ -249,7 +325,7 @@ Resposta:
 
 As rotas abaixo usam `app/services/integration_catalog.py`.
 
-### `GET /integrations/catalog`
+### `GET /integrations/catalog` (somente `ADMIN_API_KEY`)
 
 Retorna uma visao consolidada:
 
@@ -259,24 +335,26 @@ Retorna uma visao consolidada:
 - endpoints Spring catalogados;
 - recomendacoes mais relevantes para o projeto.
 
-### `GET /integrations/database/tables`
+### `GET /integrations/database/tables` (somente `ADMIN_API_KEY`)
 
 Lista tabelas do PostgreSQL remoto com categoria, estimativa de linhas, relevancia e endpoint de preview.
 
-### `GET /integrations/database/tables/{schema_name}/{table_name}`
+### `GET /integrations/database/tables/{schema_name}/{table_name}` (somente `ADMIN_API_KEY`)
 
 Detalha uma tabela remota, incluindo colunas, chaves primarias e referencias.
 
-### `GET /integrations/database/tables/{schema_name}/{table_name}/rows`
+### `GET /integrations/database/tables/{schema_name}/{table_name}/rows` (somente `ADMIN_API_KEY`)
 
 Parametros:
 
 - `limit`: 1 a 100, padrao 25.
 - `offset`: padrao 0.
 
-Retorna amostra paginada de linhas.
+Retorna amostra paginada de linhas, com `ADMIN_API_KEY`; colunas conhecidas de
+credenciais e PII (`password`, `email`, `telefone`, `matricula`, `token`,
+`hash` e variantes de caixa) são retornadas como `[redacted]`.
 
-### `GET /integrations/spring/endpoints`
+### `GET /integrations/spring/endpoints` (somente `ADMIN_API_KEY`)
 
 Lista endpoints Spring Boot catalogados.
 
@@ -304,7 +382,7 @@ Usados pela tela `/notifications`:
 
 - `GET /integrations/context/rooms?query=&limit=20`
 - `GET /integrations/context/sensors?query=&room_id=&limit=20`
-- `GET /integrations/context/people?query=&limit=20`
+- `GET /integrations/context/people?query=&limit=20` (somente `ADMIN_API_KEY`)
 
 Resposta:
 
@@ -318,6 +396,27 @@ Resposta:
   }
 ]
 ```
+
+### Contexto canônico read-only
+
+As rotas versionadas abaixo consultam a fonte PostgreSQL e exigem a chave
+administrativa nesta primeira fase. Todas retornam `metadata` com `source`,
+`scope`, `observed_at`, `fetched_at`, `fresh` e `status` (`fresh`, `stale` ou
+`empty`). Indisponibilidade retorna `503 context_source_unavailable` e escopo
+inexistente retorna `404 context_not_found`.
+
+- `GET /v1/context/users/{user_id}/profile`
+- `GET /v1/context/users/{user_id}/activities?limit=50`
+- `GET /v1/context/rooms/{room_id}/telemetry/latest`
+- `GET /v1/context/sensors/{sensor_id}/telemetry/latest`
+- `GET /v1/context/rooms/{room_id}/presence`
+- `GET /v1/context/missions?active_only=true&limit=100`
+- `GET /v1/context/rules/parameter-definitions?active_only=true&limit=100`
+
+O perfil mínimo não retorna e-mail, telefone, matrícula ou senha. Presença é
+agregada por sala e não retorna IDs de pessoas. Telemetria preserva nome e
+unidade do parâmetro; quando não há medição, `data` é `null` e o estado é
+`empty`, sem preencher zero artificialmente.
 
 ## Schemas Centrais
 
@@ -334,6 +433,13 @@ Resposta:
 - `RemoteDatabaseCatalogResponse`
 - `SpringApiCatalogResponse`
 - `ContextLookupOptionResponse`
+- `ContextMetadata`
+- `CanonicalUserProfileResponse`
+- `CanonicalActivitiesResponse`
+- `CanonicalTelemetryResponse`
+- `CanonicalPresenceResponse`
+- `CanonicalMissionsResponse`
+- `CanonicalParameterDefinitionsResponse`
 
 ## Persistencia
 

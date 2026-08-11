@@ -59,6 +59,10 @@ proteção.
 | POST | `/v1/chat` | API key | conversa síncrona |
 | GET | `/v1/personas` | API key | catálogo de personas |
 | GET | `/v1/target-profiles` | API key | catálogo de perfis-alvo |
+| GET | `/v1/notifications/types` | API key | catálogo de templates e variáveis |
+| GET | `/v1/notifications/missions` | API key | catálogo versionado das missões |
+| GET | `/v1/notifications/missions/{mission_id}` | API key | consultar uma missão |
+| POST | `/v1/notifications/generate` | API key | gerar candidata por missão |
 | POST | `/v1/chat/proactive` | API key | gerar notificação candidata |
 | POST | `/v1/rag/search` | API key | busca controlada no RAG |
 | GET | `/v1/notifications/saved` | API key | listar candidatos salvos |
@@ -66,15 +70,15 @@ proteção.
 | PATCH | `/v1/notifications/saved/{id}` | chave administrativa | aprovar/reprovar |
 | DELETE | `/v1/notifications/saved/{id}` | chave administrativa | remover um candidato |
 | DELETE | `/v1/notifications/saved/all` | chave administrativa | limpeza em lote |
-| GET | `/v1/integrations/catalog` | interno/API key | catálogo de integrações |
-| GET | `/v1/integrations/database/tables` | interno/API key | catálogo PostgreSQL |
-| GET | `/v1/integrations/database/tables/{schema}/{table}` | interno/API key | metadados de tabela |
-| GET | `/v1/integrations/database/tables/{schema}/{table}/rows` | interno/API key | preview limitado |
-| GET | `/v1/integrations/spring/endpoints` | interno/API key | catálogo Spring |
+| GET | `/v1/integrations/catalog` | chave administrativa | catálogo de integrações |
+| GET | `/v1/integrations/database/tables` | chave administrativa | catálogo PostgreSQL |
+| GET | `/v1/integrations/database/tables/{schema}/{table}` | chave administrativa | metadados de tabela |
+| GET | `/v1/integrations/database/tables/{schema}/{table}/rows` | chave administrativa | preview limitado |
+| GET | `/v1/integrations/spring/endpoints` | chave administrativa | catálogo Spring |
 | POST | `/v1/integrations/spring/endpoints/{id}/invoke` | chave administrativa | invocação allowlisted |
 | GET | `/v1/integrations/context/rooms` | API key | autocomplete de salas |
 | GET | `/v1/integrations/context/sensors` | API key | autocomplete de sensores |
-| GET | `/v1/integrations/context/people` | API key | autocomplete de pessoas |
+| GET | `/v1/integrations/context/people` | chave administrativa | autocomplete sem PII |
 
 As rotas sem `/v1` são compatibilidade temporária e não fazem parte do
 contrato novo. Elas devem ser desligadas antes da publicação do backend.
@@ -113,6 +117,22 @@ pertencer à allowlist configurada.
 O servidor valida persona, tipo de notificação, tamanho do contexto e
 variáveis obrigatórias antes de persistir o candidato como `Pendente`.
 
+O catálogo `GET /v1/notifications/types` é a fonte de descoberta para os IDs
+técnicos, categorias, subtipos e variáveis de cada template executável. O
+`notification_context` é intencionalmente extensível para acomodar as missões
+do documento de notificações: usuário e recompensas, missão e progresso,
+localização, telemetria interna, contexto externo/baselines e ranking/conquistas.
+Ele continua limitado a 32 chaves e 8 KiB serializados.
+
+O documento V3 possui 64 missões de produto. Elas não são tratadas como 64
+templates executáveis nesta etapa: uma missão só deve ganhar um ID técnico
+quando tiver template versionado, fontes de dados e regras de disparo definidos.
+
+O catálogo de missões agora registra a distinção entre entradas de outros
+componentes (`component_inputs`) e entradas derivadas pelo agente
+(`agent_inputs`). O endpoint dedicado de geração resolve o template pelo
+`mission_id`; uma missão sem template retorna `409` e não chama o LLM.
+
 O `POST /v1/notifications/saved` também só aceita `type: "Pendente"`; a
 transição para `Aprovada` ou `Reprovada` passa pelo `PATCH` administrativo.
 
@@ -135,6 +155,10 @@ Valores aceitos: `Pendente`, `Aprovada` e `Reprovada`.
    executar sondas externas para cada chamada pública.
 5. Confirmar, com os revisores de produto, nomes finais dos recursos e
    versionamento dos payloads de notificação.
+6. Normalizar as 64 missões do documento em um catálogo versionado antes de
+   criar `mission_id` e endpoints de entrega.
+7. Fechar fontes canônicas e autorização para perfil, pontuação, ranking,
+   telemetria e estado persistente das missões.
 
 O deploy atrás de Caddy/Tunnel deve preencher `TRUSTED_PROXY_NETWORKS` com a
 rede real do gateway. O valor padrão vazio não aceita `X-Forwarded-For` nem
@@ -157,6 +181,10 @@ gateway FastAPI nem deve receber o tráfego da API `/v1`.
 - Headers de segurança e limite de corpo aparecem nas respostas públicas.
 - Corpos acima de `MAX_REQUEST_BODY_BYTES` recebem `413` antes da rota.
 - `/v1` aparece no OpenAPI; rotas legadas podem ser desligadas.
+- O OpenAPI expõe o catálogo de templates e schemas explícitos para o fluxo de
+  revisão humana das notificações.
+- O OpenAPI expõe o catálogo versionado de missões e a geração dedicada sem
+  quebrar `/v1/chat/proactive`.
 - Testes automatizados cobrem autenticação, CORS, rate limit, hosts, headers,
   allowlist e contratos básicos.
 

@@ -156,6 +156,15 @@ class Settings(BaseSettings):
     """Modelos permitidos em model_override, separados por vírgula; vazio não restringe em dev."""
 
     # ==========================================
+    # Agente local de métricas do host
+    # ==========================================
+    node_metrics_path: str = "/run/procelbot/node-metrics/latest.json"
+    """Snapshot somente leitura produzido pelo agente local do host."""
+
+    node_metrics_max_age_seconds: int = 60
+    """TTL do snapshot; dados antigos são retornados com fresh=false."""
+
+    # ==========================================
     # Integrações Externas - PostgreSQL Remoto
     # ==========================================
     remote_pg_host: str = "srv1428963.hstgr.cloud"
@@ -173,14 +182,32 @@ class Settings(BaseSettings):
     remote_pg_database: str = "procel_analytics"
     """Banco de dados principal com medições e ocupação."""
 
-    remote_pg_sslmode: Literal["disable", "allow", "prefer", "require"] = "prefer"
-    """Modo SSL usado na conexão com o PostgreSQL remoto."""
+    remote_pg_sslmode: Literal[
+        "disable",
+        "allow",
+        "prefer",
+        "require",
+        "verify-ca",
+        "verify-full",
+    ] = "require"
+    """Modo SSL usado na conexão com o PostgreSQL remoto.
+
+    `require` é o padrão para impedir que uma senha ou telemetria atravesse a
+    rede em texto claro. Ambientes de desenvolvimento podem optar
+    explicitamente por outro modo, mas a publicação deve permanecer em TLS.
+    """
 
     remote_pg_connect_timeout: int = 5
     """Timeout de conexão com o PostgreSQL remoto, em segundos."""
 
     remote_pg_max_limit: int = 100
     """Limite máximo de registros retornados por consulta exploratória."""
+
+    context_max_age_seconds: int = 300
+    """Idade máxima, em segundos, para um snapshot canônico ser considerado fresco."""
+
+    context_max_items: int = 100
+    """Limite máximo de itens retornados pelos contratos canônicos de contexto."""
 
     # ==========================================
     # Integrações Externas - Spring Boot

@@ -1,0 +1,1652 @@
+{
+  "catalog_version": "2026-08-11",
+  "source_document": "MissõesXnotificaçõesV3.docx",
+  "mission_count": 64,
+  "missions": [
+    {
+      "mission_id": "ultimo_a_apagar",
+      "name": "Último a Apagar",
+      "category": "Desafios e Missões",
+      "subtype": "Convite para Missão Diária",
+      "template_id": "missao_convite",
+      "execution_status": "mapped_template",
+      "example": "Ei, {user_first_name}! Que tal ser o 'Último a Apagar' hoje? Confirme a saída no app, mude o status para sala fechada e garanta seus pontos de economia!",
+      "component_inputs": [
+        "presence_status",
+        "luminosity_level",
+        "room_id",
+        "time_window_elapsed"
+      ],
+      "agent_inputs": [
+        "user_first_name",
+        "xp_reward"
+      ],
+      "context_variables": [
+        "presence_status",
+        "luminosity_level",
+        "room_id",
+        "time_window_elapsed",
+        "user_first_name",
+        "xp_reward"
+      ]
+    },
+    {
+      "mission_id": "sala_vazia_luz_off",
+      "name": "Sala Vazia, Luz Off",
+      "category": "Feedback em Tempo Real",
+      "subtype": "Alerta de Consumo Anômalo",
+      "template_id": "feedback_alerta_consumo",
+      "execution_status": "mapped_template",
+      "example": "Atenção! A sala {room_id} foi detectada vazia mas a luz artificial continuou acesa. Que tal apagá-la agora e evitar o desperdício de {potential_wasted_kwh} kWh?",
+      "component_inputs": [
+        "xp_reward",
+        "coins_reward",
+        "presence_status",
+        "lighting_power_delta"
+      ],
+      "agent_inputs": [
+        "room_id",
+        "potential_wasted_kwh"
+      ],
+      "context_variables": [
+        "xp_reward",
+        "coins_reward",
+        "presence_status",
+        "lighting_power_delta",
+        "room_id",
+        "potential_wasted_kwh"
+      ]
+    },
+    {
+      "mission_id": "luz_na_medida",
+      "name": "Luz na Medida",
+      "category": "Desafios e Missões",
+      "subtype": "Atualização de Status da Missão",
+      "template_id": "missao_status",
+      "execution_status": "mapped_template",
+      "example": "Falta pouco! A aula na sala {room_id} está na metade e você manteve a iluminação na faixa econômica ideal por {current_progress_percent}% do tempo. Continue assim!",
+      "component_inputs": [
+        "xp_reward",
+        "coins_reward",
+        "current_lux_reading",
+        "target_lux_range",
+        "presence_status"
+      ],
+      "agent_inputs": [
+        "room_id",
+        "current_progress_percent"
+      ],
+      "context_variables": [
+        "xp_reward",
+        "coins_reward",
+        "current_lux_reading",
+        "target_lux_range",
+        "presence_status",
+        "room_id",
+        "current_progress_percent"
+      ]
+    },
+    {
+      "mission_id": "ac_inteligente",
+      "name": "AC Inteligente",
+      "category": "Desafios e Missões",
+      "subtype": "Convite para Missão Diária",
+      "template_id": "missao_convite",
+      "execution_status": "mapped_template",
+      "example": "Desafio do Clima: Ajustar o setpoint do ar-condicionado da sala {room_id} para a faixa recomendada (23°C-25°C) durante esta aula e ganhe o dobro de moedas!",
+      "component_inputs": [
+        "user_setpoint_input",
+        "maintenance_timer",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "room_id",
+        "user_first_name",
+        "recommended_temperature_range"
+      ],
+      "context_variables": [
+        "user_setpoint_input",
+        "maintenance_timer",
+        "xp_reward",
+        "coins_reward",
+        "room_id",
+        "user_first_name",
+        "recommended_temperature_range"
+      ]
+    },
+    {
+      "mission_id": "intervalo_fresco_natural",
+      "name": "Intervalo Fresco Natural",
+      "category": "Feedback em Tempo Real",
+      "subtype": "Dica Contextual",
+      "template_id": "feedback_dica_contextual",
+      "execution_status": "mapped_template",
+      "example": "O intervalo começou! Com as portas e janelas abertas, aproveite o ar natural e certifique-se de que o ar-condicionado foi desligado para economizar.",
+      "component_inputs": [
+        "interval_time_window",
+        "external_temperature",
+        "door_window_sensor_status",
+        "ac_status",
+        "cooling_consumption_kwh",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "room_id"
+      ],
+      "context_variables": [
+        "interval_time_window",
+        "external_temperature",
+        "door_window_sensor_status",
+        "ac_status",
+        "cooling_consumption_kwh",
+        "xp_reward",
+        "coins_reward",
+        "room_id"
+      ]
+    },
+    {
+      "mission_id": "aula_com_luz_natural",
+      "name": "Aula com Luz Natural",
+      "category": "Desafios e Missões",
+      "subtype": "Atualização de Status da Missão",
+      "template_id": "missao_status",
+      "execution_status": "mapped_template",
+      "example": "Que belo dia lá fora! Sua aula na sala {room_id} está aproveitando a alta luminosidade ambiente com baixo uso de luz artificial. Continue nessa meta!",
+      "component_inputs": [
+        "luminosity_level",
+        "current_progress_percent",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "room_id"
+      ],
+      "context_variables": [
+        "luminosity_level",
+        "current_progress_percent",
+        "xp_reward",
+        "coins_reward",
+        "room_id"
+      ]
+    },
+    {
+      "mission_id": "checagem_de_corredor",
+      "name": "Checagem de Corredor",
+      "category": "Desafios e Missões",
+      "subtype": "Convite para Missão Diária",
+      "template_id": "missao_convite",
+      "execution_status": "mapped_template",
+      "example": "Missão Explorador: Percorra o corredor {corridor_id}. Se as 3 salas estiverem vazias e com as luzes devidamente apagadas após sua passagem, os pontos são seus!",
+      "component_inputs": [
+        "presence_status",
+        "luminosity_level",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "corridor_id"
+      ],
+      "context_variables": [
+        "presence_status",
+        "luminosity_level",
+        "xp_reward",
+        "coins_reward",
+        "corridor_id"
+      ]
+    },
+    {
+      "mission_id": "aula_economica",
+      "name": "Aula Econômica",
+      "category": "Desafios e Missões",
+      "subtype": "Convite para Missão Diária",
+      "template_id": "missao_convite",
+      "execution_status": "mapped_template",
+      "example": "Sua próxima aula na sala {room_id} foi selecionada! Se o consumo total por hora ficar abaixo do padrão histórico ({historical_baseline_kwh} kWh), você ganha XP!",
+      "component_inputs": [
+        "measured_hourly_consumption",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "room_id",
+        "historical_baseline_kwh"
+      ],
+      "context_variables": [
+        "measured_hourly_consumption",
+        "xp_reward",
+        "coins_reward",
+        "room_id",
+        "historical_baseline_kwh"
+      ]
+    },
+    {
+      "mission_id": "verificacao_inicial",
+      "name": "Verificação Inicial",
+      "category": "Desafios e Missões",
+      "subtype": "Convite para Missão Diária",
+      "template_id": "missao_convite",
+      "execution_status": "mapped_template",
+      "example": "Chegou mais cedo? Confirme no app se as luzes e o AC da sala {room_id} estavam totalmente desligados antes da sua entrada e ganhe seus pontos de verificação.",
+      "component_inputs": [
+        "presence_status",
+        "measured_consumption_kwh",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "room_id"
+      ],
+      "context_variables": [
+        "presence_status",
+        "measured_consumption_kwh",
+        "xp_reward",
+        "coins_reward",
+        "room_id"
+      ]
+    },
+    {
+      "mission_id": "controle_de_porta",
+      "name": "Controle de Porta",
+      "category": "Desafios e Missões",
+      "subtype": "Atualização de Status da Missão",
+      "template_id": "missao_status",
+      "execution_status": "mapped_template",
+      "example": "Porta fechada, economia garantida! Você manteve a porta da sala climatizada {room_id} fechada na maior parte do tempo, evitando a perda de eficiência do AC.",
+      "component_inputs": [
+        "door_window_sensor_status",
+        "ac_status",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "room_id"
+      ],
+      "context_variables": [
+        "door_window_sensor_status",
+        "ac_status",
+        "xp_reward",
+        "coins_reward",
+        "room_id"
+      ]
+    },
+    {
+      "mission_id": "detetive_de_sala_quente",
+      "name": "Detetive de Sala Quente",
+      "category": "Feedback em Tempo Real",
+      "subtype": "Alerta de Consumo Anômalo",
+      "template_id": "feedback_alerta_consumo",
+      "execution_status": "mapped_template",
+      "example": "Anomalia térmica detectada na sala {room_id}. O sensor registrou {temperature_internal}°C, confirmando o seu relato de desconforto. Relatório enviado para a manutenção!",
+      "component_inputs": [
+        "recommended_temperature_range",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "room_id",
+        "temperature_internal"
+      ],
+      "context_variables": [
+        "recommended_temperature_range",
+        "xp_reward",
+        "coins_reward",
+        "room_id",
+        "temperature_internal"
+      ]
+    },
+    {
+      "mission_id": "detetive_de_sala_fria",
+      "name": "Detetive de Sala Fria",
+      "category": "Feedback em Tempo Real",
+      "subtype": "Alerta de Consumo Anômalo",
+      "template_id": "feedback_alerta_consumo",
+      "execution_status": "mapped_template",
+      "example": "Alerta de sobreelevação de refrigeração validado. A sala {room_id} registrou {temperature_internal}°C, indicando desperdício do AC. Parabéns pelo feedback técnico!",
+      "component_inputs": [
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "room_id",
+        "temperature_internal",
+        "recommended_temperature_range"
+      ],
+      "context_variables": [
+        "xp_reward",
+        "coins_reward",
+        "room_id",
+        "temperature_internal",
+        "recommended_temperature_range"
+      ]
+    },
+    {
+      "mission_id": "relato_coerente",
+      "name": "Relato Coerente",
+      "category": "Conquistas e Progresso",
+      "subtype": "Desbloqueio de Conquista",
+      "template_id": "conquista_badge",
+      "execution_status": "mapped_template",
+      "example": "Agradecemos a colaboração! As respostas enviadas sobre o conforto térmico e lumínico da sala {room_id} coincidiram perfeitamente com os dados históricos e em tempo real do sistema.",
+      "component_inputs": [
+        "lux_level",
+        "temperature_internal",
+        "ruido_ambiente",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "room_id"
+      ],
+      "context_variables": [
+        "lux_level",
+        "temperature_internal",
+        "ruido_ambiente",
+        "xp_reward",
+        "coins_reward",
+        "room_id"
+      ]
+    },
+    {
+      "mission_id": "power_hour",
+      "name": "Power Hour",
+      "category": "Desafios e Missões",
+      "subtype": "Convite para Missão Diária",
+      "template_id": "missao_convite",
+      "execution_status": "mapped_template",
+      "example": "Janela Crítica Ativada! Mantenha o consumo da sala {room_id} estável nos próximos {class_duration_minutes} minutos para bater a meta sem picos de carga.",
+      "component_inputs": [
+        "measured_consumption_kwh",
+        "historical_peak_kwh",
+        "presence_status",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "room_id",
+        "class_remaining_minutes"
+      ],
+      "context_variables": [
+        "measured_consumption_kwh",
+        "historical_peak_kwh",
+        "presence_status",
+        "xp_reward",
+        "coins_reward",
+        "room_id",
+        "class_remaining_minutes"
+      ]
+    },
+    {
+      "mission_id": "turno_sem_ac",
+      "name": "Turno Sem AC",
+      "category": "Desafios e Missões",
+      "subtype": "Convite para Missão Diária",
+      "template_id": "missao_convite",
+      "execution_status": "mapped_template",
+      "example": "Oportunidade Ecológica: A temperatura externa atual é de {temperature_external}°C com umidade em {humidity_external}%. Que tal manter o ar-condicionado em modo desligado nesta aula?",
+      "component_inputs": [
+        "external_humidity",
+        "ac_status",
+        "temperature_internal",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "temperature_external",
+        "humidity_external"
+      ],
+      "context_variables": [
+        "external_humidity",
+        "ac_status",
+        "temperature_internal",
+        "xp_reward",
+        "coins_reward",
+        "temperature_external",
+        "humidity_external"
+      ]
+    },
+    {
+      "mission_id": "monitor_de_luz",
+      "name": "Monitor de Luz",
+      "category": "Desafios e Missões",
+      "subtype": "Convite para Missão Diária",
+      "template_id": "missao_convite",
+      "execution_status": "mapped_template",
+      "example": "Rotina de encerramento monitorada: aguarde a transição de saída para confirmar que a iluminação foi reduzida a zero na sala {room_id} após o sinal.",
+      "component_inputs": [
+        "presence_status",
+        "lux_level",
+        "status_iluminacao",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "room_id"
+      ],
+      "context_variables": [
+        "presence_status",
+        "lux_level",
+        "status_iluminacao",
+        "xp_reward",
+        "coins_reward",
+        "room_id"
+      ]
+    },
+    {
+      "mission_id": "auditor_do_andar",
+      "name": "Auditor do Andar",
+      "category": "Desafios e Missões",
+      "subtype": "Convite para Missão Diária",
+      "template_id": "missao_convite",
+      "execution_status": "mapped_template",
+      "example": "Varredura de Eficiência: Há salas desocupadas no {floor_id} registrando consumo de circuito ativo. Verifique o local para evitar penalidades na pontuação geral.",
+      "component_inputs": [
+        "presence_status",
+        "lux_level",
+        "ac_status",
+        "consumo_circuito",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "floor_id"
+      ],
+      "context_variables": [
+        "presence_status",
+        "lux_level",
+        "ac_status",
+        "consumo_circuito",
+        "xp_reward",
+        "coins_reward",
+        "floor_id"
+      ]
+    },
+    {
+      "mission_id": "minimizar_pico",
+      "name": "Minimizar Pico",
+      "category": "Desafios e Missões",
+      "subtype": "Convite para Missão Diária",
+      "template_id": "missao_convite",
+      "execution_status": "mapped_template",
+      "example": "Controle de Demanda Noturna: O consumo em tempo real da sala é {measured_consumption_kwh} kWh. Ajuste a carga para permanecer abaixo do teto de pico histórico de {historical_peak_kwh} kWh.",
+      "component_inputs": [
+        "measured_consumption_kwh",
+        "room_id",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "historical_peak_kwh"
+      ],
+      "context_variables": [
+        "measured_consumption_kwh",
+        "room_id",
+        "xp_reward",
+        "coins_reward",
+        "historical_peak_kwh"
+      ]
+    },
+    {
+      "mission_id": "sala_eco_estudo",
+      "name": "Sala Eco-estudo",
+      "category": "Desafios e Missões",
+      "subtype": "Atualização de Status da Missão",
+      "template_id": "missao_status",
+      "execution_status": "mapped_template",
+      "example": "Área de alto desempenho: A sua sessão na sala {room_id} está mantendo um perfil estável com consumo energético acumulado de apenas {measured_consumption_kwh} kWh. Continue assim!",
+      "component_inputs": [
+        "room_id",
+        "presence_status",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "measured_consumption_kwh"
+      ],
+      "context_variables": [
+        "room_id",
+        "presence_status",
+        "xp_reward",
+        "coins_reward",
+        "measured_consumption_kwh"
+      ]
+    },
+    {
+      "mission_id": "chegada_consciente",
+      "name": "Chegada Consciente",
+      "category": "Desafios e Missões",
+      "subtype": "Convite para Missão Diária",
+      "template_id": "missao_convite",
+      "execution_status": "mapped_template",
+      "example": "Início de aula otimizado: O medidor acusou um acréscimo de apenas {lighting_power_delta} kW na ativação inicial da sala {room_id}, valor menor que o baseline típico. Meta avançada!",
+      "component_inputs": [
+        "room_baseline_consumption",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "lighting_power_delta",
+        "room_id"
+      ],
+      "context_variables": [
+        "room_baseline_consumption",
+        "xp_reward",
+        "coins_reward",
+        "lighting_power_delta",
+        "room_id"
+      ]
+    },
+    {
+      "mission_id": "mudanca_visivel",
+      "name": "Mudança Visível",
+      "category": "Feedback em Tempo Real",
+      "subtype": "Feedback em Tempo Real",
+      "template_id": null,
+      "execution_status": "catalog_only",
+      "example": "Ação computada! O gráfico de telemetria registrou uma queda real de {power_drop_percentage}% no consumo da sala {room_id} logo após a sua intervenção manual.",
+      "component_inputs": [
+        "measured_consumption_kwh",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "power_drop_percentage",
+        "room_id"
+      ],
+      "context_variables": [
+        "measured_consumption_kwh",
+        "xp_reward",
+        "coins_reward",
+        "power_drop_percentage",
+        "room_id"
+      ]
+    },
+    {
+      "mission_id": "sem_sobras",
+      "name": "Sem Sobras",
+      "category": "Desafios e Missões",
+      "subtype": "Atualização de Status da Missão",
+      "template_id": "missao_status",
+      "execution_status": "mapped_template",
+      "example": "Missão de Saída concluída! O tempo de transição entre a desocupação da sala e o 'modo vazio' foi de apenas {vazio_mode_latency_minutes} minutos, batendo o limite alvo.",
+      "component_inputs": [
+        "presence_status",
+        "measured_consumption_kwh",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "vazio_mode_latency_minutes"
+      ],
+      "context_variables": [
+        "presence_status",
+        "measured_consumption_kwh",
+        "xp_reward",
+        "coins_reward",
+        "vazio_mode_latency_minutes"
+      ]
+    },
+    {
+      "mission_id": "multiplas_salas_eficientes",
+      "name": "Múltiplas Salas Eficientes",
+      "category": "Social e Competição",
+      "subtype": "Posição no Ranking",
+      "template_id": "social_ranking",
+      "execution_status": "mapped_template",
+      "example": "Desempenho exemplar! Você passou por 3 salas mapeadas na faixa de consumo {current_rank_percentile} e manteve a consistência verde no dashboard de hoje.",
+      "component_inputs": [
+        "room_baseline_consumption",
+        "measured_consumption_kwh",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "current_rank_percentile"
+      ],
+      "context_variables": [
+        "room_baseline_consumption",
+        "measured_consumption_kwh",
+        "xp_reward",
+        "coins_reward",
+        "current_rank_percentile"
+      ]
+    },
+    {
+      "mission_id": "acompanhando_o_grafico",
+      "name": "Acompanhando o Gráfico",
+      "category": "Desafios e Missões",
+      "subtype": "Atualização de Status da Missão",
+      "template_id": "missao_status",
+      "execution_status": "mapped_template",
+      "example": "Interatividade validada! A redução de carga foi visualizada no dashboard em tempo real com atraso de rede menor que {telemetry_delay_seconds} segundos.",
+      "component_inputs": [
+        "measured_consumption_kwh",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "telemetry_delay_seconds",
+        "room_id"
+      ],
+      "context_variables": [
+        "measured_consumption_kwh",
+        "xp_reward",
+        "coins_reward",
+        "telemetry_delay_seconds",
+        "room_id"
+      ]
+    },
+    {
+      "mission_id": "preferencia_eficiente",
+      "name": "Preferência Eficiente",
+      "category": "Desafios e Missões",
+      "subtype": "Convite para Missão Diária",
+      "template_id": "missao_convite",
+      "execution_status": "mapped_template",
+      "example": "Você escolheu estudar em uma sala classificada como 'Alto Desempenho Energético' ({room_id}). Aproveite a infraestrutura otimizada do campus!",
+      "component_inputs": [
+        "room_baseline_consumption",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "room_id"
+      ],
+      "context_variables": [
+        "room_baseline_consumption",
+        "xp_reward",
+        "coins_reward",
+        "room_id"
+      ]
+    },
+    {
+      "mission_id": "reporte_de_ocupacao",
+      "name": "Reporte de Ocupação",
+      "category": "Feedback em Tempo Real",
+      "subtype": "Dica Contextual",
+      "template_id": "feedback_dica_contextual",
+      "execution_status": "mapped_template",
+      "example": "Dados validados com sucesso. A sua sinalização de sala vazia confere com o sensor de ruído fixado em {ruido_ambiente} dB e presença zerada.",
+      "component_inputs": [
+        "presence_status",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "room_id",
+        "ruido_ambiente"
+      ],
+      "context_variables": [
+        "presence_status",
+        "xp_reward",
+        "coins_reward",
+        "room_id",
+        "ruido_ambiente"
+      ]
+    },
+    {
+      "mission_id": "sala_sem_fantasma",
+      "name": "Sala Sem Fantasma",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Meta Coletiva alcançada! Durante 5 dias consecutivos, a sala {room_id} não registrou nenhuma ativação de circuito fantasma por mais de {max_ghost_minutes} minutos.",
+      "component_inputs": [
+        "room_id",
+        "max_ghost_minutes",
+        "presence_status",
+        "consumo_circuito",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "room_id",
+        "max_ghost_minutes"
+      ],
+      "context_variables": [
+        "room_id",
+        "max_ghost_minutes",
+        "presence_status",
+        "consumo_circuito",
+        "xp_reward",
+        "coins_reward"
+      ]
+    },
+    {
+      "mission_id": "virada_de_turno_perfeita",
+      "name": "Virada de Turno Perfeita",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Fechamento perfeito esta semana! Todas as salas do setor foram para o patamar mínimo em até {turn_transition_minutes} minutos após a última aula regular.",
+      "component_inputs": [
+        "turn_transition_minutes",
+        "measured_consumption_kwh",
+        "presence_status",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "turn_transition_minutes"
+      ],
+      "context_variables": [
+        "turn_transition_minutes",
+        "measured_consumption_kwh",
+        "presence_status",
+        "xp_reward",
+        "coins_reward"
+      ]
+    },
+    {
+      "mission_id": "aula_eficiente",
+      "name": "Aula Eficiente",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Sua turma bateu a meta! O consumo médio acumulado das aulas desta semana ficou {saving_goal_percent}% abaixo do baseline histórico mapeado para o horário.",
+      "component_inputs": [
+        "saving_goal_percent",
+        "room_baseline_consumption",
+        "measured_consumption_kwh",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "saving_goal_percent"
+      ],
+      "context_variables": [
+        "saving_goal_percent",
+        "room_baseline_consumption",
+        "measured_consumption_kwh",
+        "xp_reward",
+        "coins_reward"
+      ]
+    },
+    {
+      "mission_id": "luz_natural_diurna",
+      "name": "Luz Natural Diurna",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Engajamento solar sustentável: os sensores de luminosidade registraram aproveitamento de luz externa em {natural_light_ratio}% das aulas diurnas da semana.",
+      "component_inputs": [
+        "natural_light_ratio",
+        "lux_level",
+        "status_iluminacao",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "natural_light_ratio"
+      ],
+      "context_variables": [
+        "natural_light_ratio",
+        "lux_level",
+        "status_iluminacao",
+        "xp_reward",
+        "coins_reward"
+      ]
+    },
+    {
+      "mission_id": "ac_na_faixa",
+      "name": "AC na Faixa",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Climatização eficiente! Esta semana a sala permaneceu {compliance_hours_count} horas com o AC dentro da faixa ideal de temperatura e sem registros de funcionamento em sala vazia.",
+      "component_inputs": [
+        "compliance_hours_count",
+        "temperature_internal",
+        "presence_status",
+        "ac_status",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "compliance_hours_count"
+      ],
+      "context_variables": [
+        "compliance_hours_count",
+        "temperature_internal",
+        "presence_status",
+        "ac_status",
+        "xp_reward",
+        "coins_reward"
+      ]
+    },
+    {
+      "mission_id": "semana_sem_alertas",
+      "name": "Semana Sem Alertas",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Meta de Conserto batida! A sala completou um ciclo de 7 dias com {alerts_triggered_count} notificações de desperdício emitidas pelo sistema de monitoramento.",
+      "component_inputs": [
+        "alerts_triggered_count",
+        "presence_status",
+        "lux_level",
+        "ac_status",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "alerts_triggered_count"
+      ],
+      "context_variables": [
+        "alerts_triggered_count",
+        "presence_status",
+        "lux_level",
+        "ac_status",
+        "xp_reward",
+        "coins_reward"
+      ]
+    },
+    {
+      "mission_id": "pico_domado",
+      "name": "Pico Domado",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Carga controlada! O pico de consumo diário da sala caiu {peak_reduction_percentage}% em relação ao histórico da semana anterior, mantendo a mesma grade horária.",
+      "component_inputs": [
+        "peak_reduction_percentage",
+        "historical_peak_kwh",
+        "measured_consumption_kwh",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "peak_reduction_percentage"
+      ],
+      "context_variables": [
+        "peak_reduction_percentage",
+        "historical_peak_kwh",
+        "measured_consumption_kwh",
+        "xp_reward",
+        "coins_reward"
+      ]
+    },
+    {
+      "mission_id": "sala_verde",
+      "name": "Sala Verde",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Destaque no Campus: A sala foi listada com status de máxima eficiência energética em todos os relatórios diários consolidados desta semana.",
+      "component_inputs": [
+        "room_id",
+        "weekly_efficiency_index",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "room_id"
+      ],
+      "context_variables": [
+        "room_id",
+        "weekly_efficiency_index",
+        "xp_reward",
+        "coins_reward"
+      ]
+    },
+    {
+      "mission_id": "dia_100_eco",
+      "name": "Dia 100% Eco",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Desempenho Limpo! Durante as últimas 24 horas, os sensores IoT não registraram nenhum evento crítico de desperdício no mapa de calor interno do prédio.",
+      "component_inputs": [
+        "room_id",
+        "presence_status",
+        "measured_consumption_kwh",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "room_id"
+      ],
+      "context_variables": [
+        "room_id",
+        "presence_status",
+        "measured_consumption_kwh",
+        "xp_reward",
+        "coins_reward"
+      ]
+    },
+    {
+      "mission_id": "semana_do_conforto",
+      "name": "Semana do Conforto",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Equilíbrio Perfeito! Os registros de temperatura interna mantiveram a sala na faixa de conforto térmico durante todas as aulas letivas, com uso racional do AC.",
+      "component_inputs": [
+        "temperature_internal",
+        "recommended_temperature_range",
+        "ac_power_consumption",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "internal_temperature",
+        "recommended_temperature_range"
+      ],
+      "context_variables": [
+        "temperature_internal",
+        "recommended_temperature_range",
+        "ac_power_consumption",
+        "xp_reward",
+        "coins_reward",
+        "internal_temperature"
+      ]
+    },
+    {
+      "mission_id": "corredor_da_sala",
+      "name": "Corredor da Sala",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Sincronia Coletiva: Todas as turmas do setor colaboraram e o tempo médio de desligamento após o sinal foi de {corridor_shutdown_latency_minutes} minutos nesta semana.",
+      "component_inputs": [
+        "corridor_id",
+        "corridor_shutdown_latency_minutes",
+        "presence_status",
+        "lux_level",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "corridor_shutdown_latency_minutes",
+        "corridor_id"
+      ],
+      "context_variables": [
+        "corridor_id",
+        "corridor_shutdown_latency_minutes",
+        "presence_status",
+        "lux_level",
+        "xp_reward",
+        "coins_reward"
+      ]
+    },
+    {
+      "mission_id": "corredor_verde",
+      "name": "Corredor Verde",
+      "category": "Social e Competição",
+      "subtype": "Posição no Ranking",
+      "template_id": "social_ranking",
+      "execution_status": "mapped_template",
+      "example": "Vitória de Infraestrutura! O corredor principal do seu curso garantiu o {current_rank_position}° lugar no índice de eficiência energética do prédio.",
+      "component_inputs": [
+        "corridor_id",
+        "current_rank_position",
+        "measured_consumption_kwh",
+        "presence_status",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "corridor_id",
+        "current_rank_position"
+      ],
+      "context_variables": [
+        "corridor_id",
+        "current_rank_position",
+        "measured_consumption_kwh",
+        "presence_status",
+        "xp_reward",
+        "coins_reward"
+      ]
+    },
+    {
+      "mission_id": "desafio_curso_vs_curso",
+      "name": "Desafio Curso vs Curso",
+      "category": "Social e Competição",
+      "subtype": "Posição no Ranking",
+      "template_id": "social_ranking",
+      "execution_status": "mapped_template",
+      "example": "Placar da Competição: O curso reduziu o indicador de consumo/presença em {course_saving_percentage}% nesta semana e lidera o torneio de sustentabilidade!",
+      "component_inputs": [
+        "course_saving_percentage",
+        "measured_consumption_kwh",
+        "presence_status",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "course_saving_percentage"
+      ],
+      "context_variables": [
+        "course_saving_percentage",
+        "measured_consumption_kwh",
+        "presence_status",
+        "xp_reward",
+        "coins_reward"
+      ]
+    },
+    {
+      "mission_id": "top_3_salas_do_curso",
+      "name": "Top 3 Salas do Curso",
+      "category": "Social e Competição",
+      "subtype": "Posição no Ranking",
+      "template_id": "social_ranking",
+      "execution_status": "mapped_template",
+      "example": "Eficiência Setorial: O curso emplacou salas no Top 3 de economia do campus e encerrou a rodada com zero ocorrências no ranking de alto desperdício.",
+      "component_inputs": [
+        "course_id",
+        "weekly_efficiency_index",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "course_id"
+      ],
+      "context_variables": [
+        "course_id",
+        "weekly_efficiency_index",
+        "xp_reward",
+        "coins_reward"
+      ]
+    },
+    {
+      "mission_id": "semana_sem_fantasmas_do_curso",
+      "name": "Semana sem Fantasmas do Curso",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Eficiência coletiva provada! A média de consumo em ausência de todas as salas do curso ficou abaixo da linha de base do prédio nesta semana.",
+      "component_inputs": [
+        "consumption_average_kwh",
+        "building_baseline_kwh",
+        "presence_status",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "consumption_average_kwh"
+      ],
+      "context_variables": [
+        "consumption_average_kwh",
+        "building_baseline_kwh",
+        "presence_status",
+        "xp_reward",
+        "coins_reward"
+      ]
+    },
+    {
+      "mission_id": "turno_dourado",
+      "name": "Turno Dourado",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Turno impecável! Todas as salas utilizadas pelo curso neste período operaram abaixo do histórico padrão de consumo e presença.",
+      "component_inputs": [
+        "shift_label",
+        "historical_baseline_kwh",
+        "presence_status",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "measured_consumption_kwh"
+      ],
+      "context_variables": [
+        "shift_label",
+        "historical_baseline_kwh",
+        "presence_status",
+        "xp_reward",
+        "coins_reward",
+        "measured_consumption_kwh"
+      ]
+    },
+    {
+      "mission_id": "dia_verde_do_curso",
+      "name": "Dia Verde do Curso",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Dia histórico! Nenhuma sala do nosso departamento registrou status vermelho de desperdício nos relatórios horários de hoje.",
+      "component_inputs": [
+        "course_id",
+        "hourly_report_status",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "course_id"
+      ],
+      "context_variables": [
+        "course_id",
+        "hourly_report_status",
+        "xp_reward",
+        "coins_reward"
+      ]
+    },
+    {
+      "mission_id": "curso_sem_pico_desnecessario",
+      "name": "Curso Sem Pico Desnecessário",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Demanda otimizada! Conseguimos derrubar o pico de potência nas janelas de alta ocupação do curso em {peak_demand_drop_percentage}% versus a semana de referência.",
+      "component_inputs": [
+        "peak_demand_drop_percentage",
+        "measured_peak_kw",
+        "reference_peak_kw",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "peak_demand_drop_percentage"
+      ],
+      "context_variables": [
+        "peak_demand_drop_percentage",
+        "measured_peak_kw",
+        "reference_peak_kw",
+        "xp_reward",
+        "coins_reward"
+      ]
+    },
+    {
+      "mission_id": "rotina_fechamento_do_curso",
+      "name": "Rotina Fechamento do Curso",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Disciplina energética! As salas principais do curso ativaram o modo de baixo consumo em tempo recorde após o encerramento das aulas de hoje.",
+      "component_inputs": [
+        "course_id",
+        "vazio_mode_latency_minutes",
+        "measured_consumption_kwh",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "course_id"
+      ],
+      "context_variables": [
+        "course_id",
+        "vazio_mode_latency_minutes",
+        "measured_consumption_kwh",
+        "xp_reward",
+        "coins_reward"
+      ]
+    },
+    {
+      "mission_id": "semana_da_luz_natural_do_curso",
+      "name": "Semana da Luz Natural do Curso",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Aproveitamento renovável! Em mais da metade das aulas diurnas do curso, a iluminação natural foi a fonte predominante monitorada pelos sensores.",
+      "component_inputs": [
+        "natural_light_class_ratio",
+        "lux_level",
+        "status_iluminacao",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [],
+      "context_variables": [
+        "natural_light_class_ratio",
+        "lux_level",
+        "status_iluminacao",
+        "xp_reward",
+        "coins_reward"
+      ]
+    },
+    {
+      "mission_id": "andar_campeao",
+      "name": "Andar Campeão",
+      "category": "Social e Competição",
+      "subtype": "Posição no Ranking",
+      "template_id": "social_ranking",
+      "execution_status": "mapped_template",
+      "example": "Vitória no Campus! O andar de maior ocupação do curso conquistou o topo do ranking semanal com o melhor índice de eficiência predial.",
+      "component_inputs": [
+        "floor_id",
+        "weekly_efficiency_index",
+        "current_rank_position",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "floor_id"
+      ],
+      "context_variables": [
+        "floor_id",
+        "weekly_efficiency_index",
+        "current_rank_position",
+        "xp_reward",
+        "coins_reward"
+      ]
+    },
+    {
+      "mission_id": "zero_top_waster",
+      "name": "Zero Top Waster",
+      "category": "Social e Competição",
+      "subtype": "Posição no Ranking",
+      "template_id": "social_ranking",
+      "execution_status": "mapped_template",
+      "example": "Curso fora do Limbo! Nenhuma de nossas salas integradas apareceu no ranking indesejado das '10 mais gastonas' da universidade esta semana.",
+      "component_inputs": [
+        "course_id",
+        "campus_waster_ranking_position",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "course_id"
+      ],
+      "context_variables": [
+        "course_id",
+        "campus_waster_ranking_position",
+        "xp_reward",
+        "coins_reward"
+      ]
+    },
+    {
+      "mission_id": "semana_piloto_do_curso",
+      "name": "Semana Piloto do Curso",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Meta institucional batida! O esforço conjunto das turmas superou a meta de economia semanal proposta pela reitoria para o nosso curso.",
+      "component_inputs": [
+        "weekly_saving_target_kwh",
+        "measured_course_consumption_kwh",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "measured_course_consumption_kwh"
+      ],
+      "context_variables": [
+        "weekly_saving_target_kwh",
+        "measured_course_consumption_kwh",
+        "xp_reward",
+        "coins_reward"
+      ]
+    },
+    {
+      "mission_id": "curso_estavel",
+      "name": "Curso Estável",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Consistência exemplar! O curso completou sua 3ª semana consecutiva mantendo o equilíbrio de consumo/presença sem qualquer regressão.",
+      "component_inputs": [
+        "efficiency_index_trend",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "consecutive_weeks_count"
+      ],
+      "context_variables": [
+        "efficiency_index_trend",
+        "xp_reward",
+        "coins_reward",
+        "consecutive_weeks_count"
+      ]
+    },
+    {
+      "mission_id": "curso_sem_noite_ligada",
+      "name": "Curso Sem Noite Ligada",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Eficiência noturna! Todas as salas do curso registraram o patamar mínimo de consumo ({consumption_average_kwh} kWh) sem picos fora do padrão em todas as noites da semana.",
+      "component_inputs": [
+        "ac_status",
+        "status_iluminacao",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "consumption_average_kwh"
+      ],
+      "context_variables": [
+        "ac_status",
+        "status_iluminacao",
+        "xp_reward",
+        "coins_reward",
+        "consumption_average_kwh"
+      ]
+    },
+    {
+      "mission_id": "curso_top_3_do_predio",
+      "name": "Curso Top 3 do Prédio",
+      "category": "Social e Competição",
+      "subtype": "Posição no Ranking",
+      "template_id": "social_ranking",
+      "execution_status": "mapped_template",
+      "example": "Desempenho de Elite! Nosso curso alcançou a {current_rank_position}ª posição no relatório semanal geral de eficiência entre todos os departamentos do prédio.",
+      "component_inputs": [
+        "weekly_efficiency_index",
+        "course_id",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "current_rank_position"
+      ],
+      "context_variables": [
+        "weekly_efficiency_index",
+        "course_id",
+        "xp_reward",
+        "coins_reward",
+        "current_rank_position"
+      ]
+    },
+    {
+      "mission_id": "semestre_em_miniature",
+      "name": "Semestre em Miniature",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Padrão Ideal Alcançado! Esta semana a sala operou com {alerts_triggered_count} fantasmas, intensidade de luz reduzida e uso moderado de AC.",
+      "component_inputs": [
+        "lux_level",
+        "ac_power_consumption",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "alerts_triggered_count"
+      ],
+      "context_variables": [
+        "lux_level",
+        "ac_power_consumption",
+        "xp_reward",
+        "coins_reward",
+        "alerts_triggered_count"
+      ]
+    },
+    {
+      "mission_id": "guardiao_de_salas",
+      "name": "Guardião de Salas",
+      "category": "Conquistas e Progresso",
+      "subtype": "Desbloqueio de Conquista",
+      "template_id": "conquista_badge",
+      "execution_status": "mapped_template",
+      "example": "Título Semestral Conquistado! Você concluiu missões em {efficient_rooms_count} salas que terminaram o semestre com status verde de eficiência. Desbloqueado: Badge {badge_name}!",
+      "component_inputs": [
+        "badge_name",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "efficient_rooms_count"
+      ],
+      "context_variables": [
+        "badge_name",
+        "xp_reward",
+        "coins_reward",
+        "efficient_rooms_count"
+      ]
+    },
+    {
+      "mission_id": "semestre_ativo",
+      "name": "Semestre Ativo",
+      "category": "Conquistas e Progresso",
+      "subtype": "Desbloqueio de Conquista",
+      "template_id": "conquista_badge",
+      "execution_status": "mapped_template",
+      "example": "Consistência Premiada! Você manteve engajamento ativo completando pelo menos {min_missions_per_week} missões em {active_weeks_count} semanas letivas diferentes neste semestre.",
+      "component_inputs": [
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "min_missions_per_week",
+        "active_weeks_count"
+      ],
+      "context_variables": [
+        "xp_reward",
+        "coins_reward",
+        "min_missions_per_week",
+        "active_weeks_count"
+      ]
+    },
+    {
+      "mission_id": "sala_de_confianca",
+      "name": "Sala de Confiança",
+      "category": "Conquistas e Progresso",
+      "subtype": "Desbloqueio de Conquista",
+      "template_id": "conquista_badge",
+      "execution_status": "mapped_template",
+      "example": "Aliado da Sala! Foram mais de {missions_completed_count} missões realizadas na sala {room_id}, ajudando-a a terminar no Top 10 de eficiência do campus. Desbloqueado: Badge {badge_name}!",
+      "component_inputs": [
+        "badge_name",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "room_id",
+        "missions_completed_count"
+      ],
+      "context_variables": [
+        "badge_name",
+        "xp_reward",
+        "coins_reward",
+        "room_id",
+        "missions_completed_count"
+      ]
+    },
+    {
+      "mission_id": "eco_regular",
+      "name": "Eco Regular",
+      "category": "Conquistas e Progresso",
+      "subtype": "Desbloqueio de Conquista",
+      "template_id": "conquista_badge",
+      "execution_status": "mapped_template",
+      "example": "Hábito Sustentável! Você concluiu pelo menos {missions_completed_count} missões semanais em mais da metade do calendário letivo deste semestre.",
+      "component_inputs": [
+        "calendar_weeks_ratio",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "missions_completed_count"
+      ],
+      "context_variables": [
+        "calendar_weeks_ratio",
+        "xp_reward",
+        "coins_reward",
+        "missions_completed_count"
+      ]
+    },
+    {
+      "mission_id": "sem_fantasma_pessoal",
+      "name": "Sem Fantasma Pessoal",
+      "category": "Conquistas e Progresso",
+      "subtype": "Desbloqueio de Conquista",
+      "template_id": "conquista_badge",
+      "execution_status": "mapped_template",
+      "example": "Consumo Limpo Pessoal! Você encerrou o semestre com {ghost_events_associated} associações como último usuário de salas com desperdício. Desbloqueado: Badge {badge_name}!",
+      "component_inputs": [
+        "badge_name",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "ghost_events_associated"
+      ],
+      "context_variables": [
+        "badge_name",
+        "xp_reward",
+        "coins_reward",
+        "ghost_events_associated"
+      ]
+    },
+    {
+      "mission_id": "quiz_master",
+      "name": "Quiz Master",
+      "category": "Conquistas e Progresso",
+      "subtype": "Desbloqueio de Conquista",
+      "template_id": "conquista_badge",
+      "execution_status": "mapped_template",
+      "example": "Mestre da Teoria! Todos os conteúdos de eficiência energética foram concluídos com uma média de acertos de {quiz_accuracy_percentage}%. Desbloqueado: Badge {badge_name}!",
+      "component_inputs": [
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "quiz_accuracy_percentage",
+        "badge_name"
+      ],
+      "context_variables": [
+        "xp_reward",
+        "coins_reward",
+        "quiz_accuracy_percentage",
+        "badge_name"
+      ]
+    },
+    {
+      "mission_id": "sala_sem_fantasmas",
+      "name": "Sala Sem Fantasmas",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Meta do Semestre Batida! O número total de ativações de luz/AC em sala vazia ficou abaixo do teto limite estabelecido ({ghost_threshold_count} eventos).",
+      "component_inputs": [
+        "presence_status",
+        "lux_level",
+        "ac_status",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "ghost_threshold_count"
+      ],
+      "context_variables": [
+        "presence_status",
+        "lux_level",
+        "ac_status",
+        "xp_reward",
+        "coins_reward",
+        "ghost_threshold_count"
+      ]
+    },
+    {
+      "mission_id": "sala_top_10",
+      "name": "Sala Top 10",
+      "category": "Social e Competição",
+      "subtype": "Posição no Ranking",
+      "template_id": "social_ranking",
+      "execution_status": "mapped_template",
+      "example": "Desempenho de Elite Semestral! A sala {room_id} se consolidou no Top 10 de eficiência em {efficient_months_ratio}% dos relatórios mensais. Desbloqueado para os alunos frequentes: Badge {badge_name}!",
+      "component_inputs": [
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "room_id",
+        "efficient_months_ratio",
+        "badge_name"
+      ],
+      "context_variables": [
+        "xp_reward",
+        "coins_reward",
+        "room_id",
+        "efficient_months_ratio",
+        "badge_name"
+      ]
+    },
+    {
+      "mission_id": "curso_referencia",
+      "name": "Curso Referência",
+      "category": "Social e Competição",
+      "subtype": "Posição no Ranking",
+      "template_id": "social_ranking",
+      "execution_status": "mapped_template",
+      "example": "Referência no Campus! Nosso curso alcançou o Top 3 de sustentabilidade em pelo menos {min_months_target} relatórios mensais deste período. Desbloqueado: Badge {badge_name}!",
+      "component_inputs": [
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "badge_name",
+        "min_months_target"
+      ],
+      "context_variables": [
+        "xp_reward",
+        "coins_reward",
+        "badge_name",
+        "min_months_target"
+      ]
+    },
+    {
+      "mission_id": "curso_sem_vermelho",
+      "name": "Curso Sem Vermelho",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Zerar Desperdício! Meta semestral batida: nenhuma sala principal monitorada pelo nosso departamento figurou entre as 5 piores do campus em qualquer relatório consolidado.",
+      "component_inputs": [
+        "worst_rooms_rank_position",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "course_id"
+      ],
+      "context_variables": [
+        "worst_rooms_rank_position",
+        "xp_reward",
+        "coins_reward",
+        "course_id"
+      ]
+    },
+    {
+      "mission_id": "rotina_forte_do_curso",
+      "name": "Rotina Forte do Curso",
+      "category": "Social e Competição",
+      "subtype": "Desafio Cooperativo",
+      "template_id": "social_desafio_cooperativo",
+      "execution_status": "mapped_template",
+      "example": "Hábito Consolidado! Em mais de {compliance_weeks_percentage}% das semanas letivas, as salas do curso ativaram o modo econômico de forma rápida após o sinal. Desbloqueado: Badge {badge_name}!",
+      "component_inputs": [
+        "vazio_mode_latency_minutes",
+        "badge_name",
+        "xp_reward",
+        "coins_reward"
+      ],
+      "agent_inputs": [
+        "compliance_weeks_percentage"
+      ],
+      "context_variables": [
+        "vazio_mode_latency_minutes",
+        "badge_name",
+        "xp_reward",
+        "coins_reward",
+        "compliance_weeks_percentage"
+      ]
+    }
+  ]
+}

@@ -11,6 +11,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import re
 import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
@@ -385,9 +386,11 @@ def _table_metadata(table_name: str, columns: list[str] | None = None) -> dict[s
         return TABLE_METADATA[table_name]
 
     columns = columns or []
-    lower_columns = " ".join(columns).lower()
+    normalized_columns = " ".join(
+        column.casefold().replace("-", "_") for column in columns
+    )
 
-    if "timestamp" in lower_columns or "sensor" in lower_columns:
+    if "timestamp" in normalized_columns or "sensor" in normalized_columns:
         return {
             "category": "telemetria",
             "relevance_score": 75,
@@ -403,6 +406,86 @@ def _table_metadata(table_name: str, columns: list[str] | None = None) -> dict[s
 
 class RemotePostgresCatalogService:
     """Explora o PostgreSQL remoto com foco em tabelas relevantes ao projeto."""
+
+    SENSITIVE_PREVIEW_COLUMNS = {
+        "password",
+        "passwd",
+        "pass",
+        "senha",
+        "email",
+        "e_mail",
+        "mail",
+        "telefone",
+        "phone",
+        "matricula",
+        "cpf",
+        "documento",
+        "secret",
+        "token",
+        "auth",
+        "credential",
+        "credentials",
+        "api_key",
+        "private_key",
+        "access_token",
+        "refresh_token",
+        "jwt",
+        "hash",
+    }
+    SENSITIVE_PREVIEW_TOKENS = {
+        "password",
+        "passwd",
+        "pass",
+        "senha",
+        "email",
+        "mail",
+        "telefone",
+        "phone",
+        "matricula",
+        "cpf",
+        "documento",
+        "secret",
+        "token",
+        "auth",
+        "credential",
+        "credentials",
+        "jwt",
+        "hash",
+    }
+
+    @classmethod
+    def _sanitize_preview_rows(cls, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        sanitized_rows = []
+        for row in rows:
+            sanitized_rows.append(
+                {
+                    key: "[redacted]"
+                    if cls._is_sensitive_preview_column(key)
+                    else value
+                    for key, value in row.items()
+                }
+            )
+        return sanitized_rows
+
+    @classmethod
+    def _is_sensitive_preview_column(cls, key: object) -> bool:
+        camel_case_key = re.sub(
+            r"([A-Z]+)([A-Z][a-z])", r"\1_\2", str(key)
+        )
+        camel_case_key = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", camel_case_key)
+        normalized = "".join(
+            char if char.isalnum() else "_"
+            for char in camel_case_key.casefold()
+        ).strip("_")
+        if normalized in cls.SENSITIVE_PREVIEW_COLUMNS:
+            return True
+        tokens = [token for token in normalized.split("_") if token]
+        if any(token in cls.SENSITIVE_PREVIEW_TOKENS for token in tokens):
+            return True
+        return any(
+            "_".join(tokens[index : index + 2]) in cls.SENSITIVE_PREVIEW_COLUMNS
+            for index in range(len(tokens) - 1)
+        )
 
     def _connect(self) -> psycopg.Connection:
         if not settings.remote_pg_password:
@@ -624,7 +707,7 @@ class RemotePostgresCatalogService:
             "limit": limit,
             "offset": offset,
             "row_count": len(rows),
-            "rows": rows,
+            "rows": self._sanitize_preview_rows(rows),
         }
 
     def fetch_room_by_id(self, room_id: str) -> dict[str, Any] | None:
@@ -690,6 +773,122 @@ class RemotePostgresCatalogService:
             cursor.execute(query, (pessoa_id,))
             return cursor.fetchone()
 
+    def fetch_canonical_user_profile(self, pessoa_id: str) -> dict[str, Any] | None:
+        """Busca o perfil mínimo sem e-mail, telefone ou senha."""
+        query = """
+            select
+                id,
+                nome,
+                created_at
+            from public.pessoa
+            where id = %s
+            limit 1
+        """
+
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(query, (pessoa_id,))
+            return cursor.fetchone()
+
+    def fetch_canonical_activities(
+        self,
+        pessoa_id: str,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        """Busca atividades e metadados da missão sem dados pessoais adicionais."""
+        query = """
+            select
+                a.id,
+                a.missao_id,
+                a.status,
+                a.assigned_at,
+                a.started_at,
+                a.completed_at,
+                m.tipo as mission_type,
+                m.titulo as mission_title,
+                m.value as mission_value
+            from public.atividade a
+            left join public.missao m on m.id = a.missao_id
+            where a.pessoa_id = %s
+            order by coalesce(a.completed_at, a.started_at, a.assigned_at) desc
+            limit %s
+        """
+
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(query, (pessoa_id, limit))
+            return list(cursor.fetchall())
+
+    def fetch_canonical_presence(self, room_id: str) -> dict[str, Any]:
+        """Agrega presença por sala, sem retornar identificadores de pessoas."""
+        query = """
+            select
+                count(*)::int as records_count,
+                count(*) filter (where checkout_at is null)::int as occupied_count,
+                max(checkin_at) filter (where checkout_at is null) as latest_open_checkin_at,
+                max(coalesce(checkout_at, checkin_at)) as latest_event_at
+            from public.presenca
+            where compartimento_id = %s
+        """
+
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(query, (room_id,))
+            return cursor.fetchone() or {
+                "records_count": 0,
+                "occupied_count": 0,
+                "latest_open_checkin_at": None,
+                "latest_event_at": None,
+            }
+
+    def fetch_canonical_missions(
+        self,
+        active_only: bool = True,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        """Lista missões remotas com limite explícito e somente leitura."""
+        query = """
+            select
+                id,
+                tipo,
+                titulo,
+                descricao,
+                value,
+                ativo,
+                parent_id,
+                created_at
+            from public.missao
+            where (%s = false or ativo = true)
+            order by created_at desc, id
+            limit %s
+        """
+
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(query, (active_only, limit))
+            return list(cursor.fetchall())
+
+    def fetch_canonical_parameter_definitions(
+        self,
+        active_only: bool = True,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        """Lista definições de parâmetros sem valores de usuário ou telemetria."""
+        query = """
+            select
+                id,
+                data_type,
+                numeric_unit,
+                tipo_nome,
+                nome,
+                descricao,
+                ativo
+            from public.parametro_def
+            where (%s = false or ativo = true)
+            order by tipo_nome, nome, id
+            limit %s
+        """
+
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(query, (active_only, limit))
+            return list(cursor.fetchall())
+
     def fetch_latest_sensor_measurement(self, sensor_external_id: str) -> dict[str, Any] | None:
         """Última medição de um sensor, no formato usado pelo contexto proativo."""
         return self._fetch_latest_measurement(
@@ -731,6 +930,7 @@ class RemotePostgresCatalogService:
                 m.sensor_external_id,
                 s.compartimento_id,
                 pd.nome as metric,
+                pd.numeric_unit as unit,
                 pv.numeric_value,
                 pv.boolean_value,
                 pv.text_value
@@ -749,6 +949,7 @@ class RemotePostgresCatalogService:
             return None
 
         valores: dict[str, Any] = {}
+        unidades: dict[str, str | None] = {}
         for row in rows:
             value = row["numeric_value"]
             if value is None:
@@ -758,6 +959,7 @@ class RemotePostgresCatalogService:
             if isinstance(value, Decimal):
                 value = float(value)
             valores[row["metric"]] = value
+            unidades[row["metric"]] = row["unit"]
 
         first = rows[0]
         timestamp = first["timestamp"]
@@ -770,6 +972,7 @@ class RemotePostgresCatalogService:
             "sensorExternalId": first["sensor_external_id"],
             "compartimentoId": first["compartimento_id"],
             "valores": valores,
+            "unidades": unidades,
         }
 
     def search_rooms(self, query_text: str = "", limit: int = 20) -> list[dict[str, Any]]:
@@ -903,16 +1106,12 @@ class RemotePostgresCatalogService:
         query = """
             select
                 id,
-                nome,
-                email,
-                matricula
+                nome
             from public.pessoa
             where (
                 %s = ''
                 or id ilike %s
                 or nome ilike %s
-                or coalesce(email, '') ilike %s
-                or coalesce(matricula, '') ilike %s
             )
             order by nome, id
             limit %s
@@ -925,8 +1124,6 @@ class RemotePostgresCatalogService:
                     query_text.strip(),
                     pattern,
                     pattern,
-                    pattern,
-                    pattern,
                     limit,
                 ),
             )
@@ -934,12 +1131,11 @@ class RemotePostgresCatalogService:
 
         options: list[dict[str, Any]] = []
         for row in rows:
-            description_parts = [part for part in [row.get("matricula"), row.get("email")] if part]
             options.append(
                 {
                     "id": row["id"],
                     "label": row["nome"],
-                    "description": " | ".join(description_parts) if description_parts else None,
+                    "description": None,
                     "metadata": {},
                 }
             )

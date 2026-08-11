@@ -1,6 +1,6 @@
 # SPEC-001 — Runtime local com Ollama e RTX 5090
 
-**Status:** Draft  
+**Status:** In progress — GPU validada na 5090; benchmark concorrente pendente
 **Etapa:** 1 — inferência local sem créditos de cloud  
 **Data da especificação:** 2026-08-09  
 **Responsável:** equipe do projeto
@@ -333,22 +333,44 @@ Atualizar a especificação para `Accepted` somente depois de:
 
 A SPEC-001 será aceita quando todos os itens a seguir forem verdadeiros:
 
-- [ ] `nvidia-smi` identifica a RTX 5090 no host de inferência.
-- [ ] Ollama responde em `/api/tags` e contém a tag `gemma4:26b` ou a variante
+- [x] `nvidia-smi` identifica a RTX 5090 no host de inferência.
+- [x] Ollama responde em `/api/tags` e contém a tag `gemma4:26b` ou a variante
       QAT aprovada.
-- [ ] Uma chamada direta a `/api/chat` retorna conteúdo não vazio.
-- [ ] `/v1/health` retorna `healthy`, `provider=ollama` e
+- [x] Uma chamada direta a `/api/chat` retorna conteúdo não vazio.
+- [x] `/v1/health` retorna `healthy`, `provider=ollama` e
       `provider_available=true`.
-- [ ] `/v1/chat` gera uma resposta em português sem chave Google.
-- [ ] `/v1/chat/proactive` gera e salva uma notificação pendente com
+- [x] `/v1/chat` gera uma resposta em português sem chave Google.
+- [x] `/v1/chat/proactive` gera e salva uma notificação pendente com
       `use_rag=false`.
-- [ ] Dez notificações proativas consecutivas terminam sem erro 5xx.
-- [ ] Nenhum output aprovado contém placeholder não resolvido.
-- [ ] O modelo aparece como carregado na GPU durante a geração.
-- [ ] O p95 aquecido atende o alvo definido no T7 ou existe uma decisão
+- [x] Dez notificações proativas consecutivas terminam sem erro 5xx.
+- [x] Nenhum output aprovado contém placeholder não resolvido.
+- [x] O modelo aparece como carregado na GPU durante a geração.
+- [x] O p95 aquecido atende o alvo definido no T7 ou existe uma decisão
       registrada aprovando uma meta revisada.
-- [ ] A porta `11434` não está exposta publicamente.
-- [ ] Não existe fallback automático para um serviço com cobrança.
+- [x] A porta `11434` não está exposta publicamente.
+- [x] Não existe fallback automático para um serviço com cobrança.
+
+## Evidência da validação na 5090
+
+Validação executada em 2026-08-11:
+
+- Host: RTX 5090, driver `595.71.05`; Ollama `0.30.8`.
+- Modelo: `gemma4:26b`, 25,8B, `Q4_K_M`; `runtime=nvidia` no container.
+- `/api/ps`: `size_vram=17.584.650.977` bytes; `nvidia-smi`: aproximadamente
+  18,8 GiB ocupados durante o modelo carregado.
+- Geração aquecida direta: 10/10 respostas não vazias; p95 aproximado de
+  `0,4 s` para prompt curto com até 64 tokens. O carregamento frio observado
+  ficou em aproximadamente `7,9 s`.
+- API: `/v1/health`, `/v1/chat` e `/v1/chat/proactive` responderam com
+  `provider=ollama` e `model=gemma4:26b`.
+- Smoke proativo: 10/10 chamadas com `use_rag=false`, sem erro 5xx; as dez
+  candidatas de teste foram removidas após a execução.
+- Segurança: nenhum listener/publish de `11434` no host; `OLLAMA_NO_CLOUD=1`,
+  `LLM_PROVIDER=ollama` e override de modelo desabilitado.
+
+O benchmark concorrente completo (concorrência 1, 4 e 8), temperatura,
+throttling e comparação com outra variante permanecem como medição posterior;
+eles não impedem o uso do runtime validado para notificações curtas.
 
 ## 8. Testes automatizados a preparar
 

@@ -8,6 +8,7 @@ import pytest
 
 from app.api import routes
 from app.core.config import settings
+from app.services.integration_catalog import RemotePostgresCatalogService
 
 
 class FakeRemoteDatabaseService:
@@ -126,7 +127,7 @@ class FakeRemoteDatabaseService:
             {
                 "id": "ravilon",
                 "label": "Ravilon A. Santos",
-                "description": "MAT-001 | ravilon@exemplo.com",
+                "description": None,
                 "metadata": {},
             }
         ]
@@ -177,7 +178,13 @@ class FakeSpringService:
         }
 
 
+def _admin_headers(monkeypatch):
+    monkeypatch.setattr(settings, "admin_api_key", "admin-secreta")
+    return {"X-API-Key": "admin-secreta"}
+
+
 def test_integrations_catalog_returns_combined_sources(client, monkeypatch):
+    headers = _admin_headers(monkeypatch)
     monkeypatch.setattr(
         routes,
         "get_remote_postgres_catalog_service",
@@ -189,7 +196,7 @@ def test_integrations_catalog_returns_combined_sources(client, monkeypatch):
         lambda: FakeSpringService(),
     )
 
-    response = client.get("/integrations/catalog")
+    response = client.get("/integrations/catalog", headers=headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -199,13 +206,17 @@ def test_integrations_catalog_returns_combined_sources(client, monkeypatch):
 
 
 def test_remote_database_table_detail(client, monkeypatch):
+    headers = _admin_headers(monkeypatch)
     monkeypatch.setattr(
         routes,
         "get_remote_postgres_catalog_service",
         lambda: FakeRemoteDatabaseService(),
     )
 
-    response = client.get("/integrations/database/tables/public/medicao")
+    response = client.get(
+        "/integrations/database/tables/public/medicao",
+        headers=headers,
+    )
 
     assert response.status_code == 200
     data = response.json()
@@ -215,13 +226,17 @@ def test_remote_database_table_detail(client, monkeypatch):
 
 
 def test_remote_database_rows_preview(client, monkeypatch):
+    headers = _admin_headers(monkeypatch)
     monkeypatch.setattr(
         routes,
         "get_remote_postgres_catalog_service",
         lambda: FakeRemoteDatabaseService(),
     )
 
-    response = client.get("/integrations/database/tables/public/medicao/rows?limit=5")
+    response = client.get(
+        "/integrations/database/tables/public/medicao/rows?limit=5",
+        headers=headers,
+    )
 
     assert response.status_code == 200
     data = response.json()
@@ -230,18 +245,86 @@ def test_remote_database_rows_preview(client, monkeypatch):
 
 
 def test_list_spring_endpoints(client, monkeypatch):
+    headers = _admin_headers(monkeypatch)
     monkeypatch.setattr(
         routes,
         "get_spring_api_catalog_service",
         lambda: FakeSpringService(),
     )
 
-    response = client.get("/integrations/spring/endpoints")
+    response = client.get("/integrations/spring/endpoints", headers=headers)
 
     assert response.status_code == 200
     data = response.json()
     assert data["connection"]["base_url"] == "http://srv1428963.hstgr.cloud:8080"
     assert data["endpoints"][0]["id"] == "sensor_measurements_latest"
+
+
+def test_database_rows_preview_rejects_public_api_key(client, monkeypatch):
+    monkeypatch.setattr(settings, "api_key", "publica")
+    monkeypatch.setattr(settings, "admin_api_key", "admin-secreta")
+
+    response = client.get(
+        "/v1/integrations/database/tables/public/pessoa/rows",
+        headers={"X-API-Key": "publica"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"]["error"] == "admin_scope_required"
+
+
+def test_database_preview_redacts_sensitive_columns_case_insensitively():
+    rows = [
+        {
+            "Email": "person@example.com",
+            "user_email": "person@example.com",
+            "user_e_mail": "person@example.com",
+            "contact-e-mail": "person@example.com",
+            "user_mail": "person@example.com",
+            "contact_mail": "person@example.com",
+            "userEmail": "person@example.com",
+            "PASSWORD": "secret",
+            "db_pass": "secret",
+            "Token": "jwt-value",
+            "X-Access-Token": "access-token",
+            "User-CPF": "cpf-value",
+            "user_credentials": "credential-value",
+            "X-API-Key": "api-key-value",
+            "private_key": "private-key-value",
+            "hash": "hash-value",
+            "passport": "document-value",
+            "compass": "direction-value",
+            "bypass": "routing-value",
+            "microphone": "device-value",
+            "headphones": "device-value",
+            "safe_value": "kept",
+        }
+    ]
+
+    sanitized = RemotePostgresCatalogService._sanitize_preview_rows(rows)
+
+    assert sanitized[0]["Email"] == "[redacted]"
+    assert sanitized[0]["user_email"] == "[redacted]"
+    assert sanitized[0]["user_e_mail"] == "[redacted]"
+    assert sanitized[0]["contact-e-mail"] == "[redacted]"
+    assert sanitized[0]["user_mail"] == "[redacted]"
+    assert sanitized[0]["contact_mail"] == "[redacted]"
+    assert sanitized[0]["userEmail"] == "[redacted]"
+    assert sanitized[0]["PASSWORD"] == "[redacted]"
+    assert sanitized[0]["db_pass"] == "[redacted]"
+    assert sanitized[0]["Token"] == "[redacted]"
+    assert sanitized[0]["X-Access-Token"] == "[redacted]"
+    assert sanitized[0]["User-CPF"] == "[redacted]"
+    assert sanitized[0]["user_credentials"] == "[redacted]"
+    assert sanitized[0]["X-API-Key"] == "[redacted]"
+    assert sanitized[0]["private_key"] == "[redacted]"
+    assert sanitized[0]["hash"] == "[redacted]"
+    assert sanitized[0]["passport"] == "document-value"
+    assert sanitized[0]["compass"] == "direction-value"
+    assert sanitized[0]["bypass"] == "routing-value"
+    assert sanitized[0]["microphone"] == "device-value"
+    assert sanitized[0]["headphones"] == "device-value"
+    assert sanitized[0]["safe_value"] == "kept"
 
 
 def test_lookup_context_rooms(client, monkeypatch):
@@ -275,18 +358,22 @@ def test_lookup_context_sensors(client, monkeypatch):
 
 
 def test_lookup_context_people(client, monkeypatch):
+    monkeypatch.setattr(settings, "admin_api_key", "admin-secreta")
     monkeypatch.setattr(
         routes,
         "get_remote_postgres_catalog_service",
         lambda: FakeRemoteDatabaseService(),
     )
 
-    response = client.get("/integrations/context/people?query=ravi")
+    response = client.get(
+        "/integrations/context/people?query=ravi",
+        headers={"X-API-Key": "admin-secreta"},
+    )
 
     assert response.status_code == 200
     data = response.json()
     assert data[0]["id"] == "ravilon"
-    assert "MAT-001" in data[0]["description"]
+    assert data[0]["description"] is None
 
 
 def test_invoke_spring_endpoint(client, monkeypatch):

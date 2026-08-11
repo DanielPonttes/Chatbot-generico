@@ -80,3 +80,72 @@ http://api.procel-chatbot.com {
         format json
     }
 }
+
+# Painel administrativo. O hostname será protegido por Cloudflare Access.
+# O Caddy faz o proxy server-side e injeta as chaves somente no upstream;
+# nenhuma chave chega ao HTML ou ao navegador.
+http://admin.procel-chatbot.com {
+    encode zstd gzip
+
+    request_body {
+        max_size 2MB
+    }
+
+    header {
+        -Server
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        Cache-Control "no-store"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+    }
+
+    @unsafe_methods method TRACE CONNECT
+    respond @unsafe_methods 405
+
+    # O cloudflared valida criptograficamente este JWT antes de encaminhar a
+    # requisição. O bloqueio adicional evita servir o painel se o hostname
+    # administrativo for apontado para este Caddy sem a proteção do Access.
+    @admin_without_access not header Cf-Access-Jwt-Assertion *
+    # A rota força a ordem: o bloqueio de Access ocorre antes de qualquer
+    # handle que injete uma chave no upstream.
+    route {
+        respond @admin_without_access 403
+
+        @admin_status path /api/status
+        handle @admin_status {
+            rewrite * /v1/admin/status
+            reverse_proxy chatbot:8000 {
+                header_up -Cookie
+                header_up -Authorization
+                header_up Host api.procel-chatbot.com
+                header_up X-API-Key {$PROCELBOT_ADMIN_API_KEY}
+            }
+        }
+
+        @admin_openapi path /openapi.json
+        handle @admin_openapi {
+            reverse_proxy chatbot:8000 {
+                header_up -Cookie
+                header_up -Authorization
+                header_up Host api.procel-chatbot.com
+                header_up X-API-Key {$PROCELBOT_API_KEY}
+            }
+        }
+
+        @admin_swagger path /swagger
+        handle @admin_swagger {
+            rewrite * /docs
+            reverse_proxy chatbot:8000 {
+                header_up -Cookie
+                header_up -Authorization
+                header_up Host api.procel-chatbot.com
+                header_up X-API-Key {$PROCELBOT_API_KEY}
+            }
+        }
+
+        root * /srv/admin
+        file_server
+    }
+}

@@ -6,6 +6,7 @@ Configura rotas, middleware, e lifecycle da aplicação.
 """
 
 import logging
+import time
 from contextlib import asynccontextmanager
 
 from pathlib import Path
@@ -28,7 +29,7 @@ from app.core.security import (
 
 # Diretório de arquivos estáticos
 STATIC_DIR = Path(__file__).parent / "static"
-from app.api.routes import router
+from app.api.routes import admin_router, public_router, router
 from app.services.llm_provider import close_provider
 from app.services.memory import close_memory_manager
 
@@ -56,6 +57,7 @@ async def lifespan(app: FastAPI):
     - Shutdown: libera recursos (conexões, arquivos)
     """
     # ----- STARTUP -----
+    app.state.started_monotonic = time.monotonic()
     validate_runtime_security()
     logger.info("=" * 50)
     logger.info(f"🚀 Iniciando {settings.app_name}")
@@ -103,6 +105,10 @@ app = FastAPI(
             "description": "Endpoints de conversação",
         },
         {
+            "name": "notifications",
+            "description": "Geração, catálogo e revisão humana de notificações candidatas",
+        },
+        {
             "name": "health",
             "description": "Monitoramento e health check",
         },
@@ -110,8 +116,17 @@ app = FastAPI(
             "name": "integrations",
             "description": "Exploração do PostgreSQL remoto e da API Spring Boot",
         },
+        {
+            "name": "context",
+            "description": "Contratos canônicos read-only usados pelo agente",
+        },
+        {
+            "name": "admin",
+            "description": "Operação protegida e observabilidade do backend",
+        },
     ],
 )
+app.state.started_monotonic = time.monotonic()
 
 
 # ==========================================
@@ -204,9 +219,12 @@ app.add_middleware(
 # ==========================================
 # Versão atual (v1) — caminho recomendado para consumo público
 app.include_router(router, prefix="/v1", tags=["chat"], dependencies=[Depends(verify_api_key)])
+app.include_router(admin_router, prefix="/v1", dependencies=[Depends(verify_api_key)])
+app.include_router(public_router, prefix="/v1", tags=["health"])
 
 # Caminhos legados sem prefixo — mantidos por compatibilidade, ocultos do schema (deprecar futuramente)
 app.include_router(router, tags=["chat"], dependencies=[Depends(verify_api_key)], include_in_schema=False)
+app.include_router(public_router, tags=["health"], include_in_schema=False)
 
 # ==========================================
 # Rota raiz (serve a interface de testes)

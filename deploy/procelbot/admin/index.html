@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#071018">
+    <title>Procelbot · Control Room</title>
+    <link rel="stylesheet" href="/admin.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegação principal">
+        <a class="brand" href="/" aria-label="Procelbot Control Room">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32" fill="none">
+              <path d="M16 3 27 9.3v13.4L16 29 5 22.7V9.3L16 3Z" stroke="currentColor" stroke-width="2"/>
+              <path d="m10.5 16 3.6 3.6 7.4-7.5" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span>
+            <strong>procelbot</strong>
+            <small>control room</small>
+          </span>
+        </a>
+
+        <div class="sidebar-section-label">Monitoramento</div>
+        <nav class="nav-list">
+          <a class="nav-item is-active" href="/" aria-current="page">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+            <span>Visão geral</span>
+          </a>
+          <a class="nav-item" href="/swagger">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/><path d="M14 3h7v7M10 14 21 3"/></svg>
+            <span>API &amp; Swagger</span>
+          </a>
+        </nav>
+
+        <div class="sidebar-spacer"></div>
+        <div class="sidebar-footer">
+          <div class="access-badge"><span class="mini-dot" aria-hidden="true"></span> Access protegido</div>
+          <p>RTX node <span>·</span> inferência local</p>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div class="breadcrumbs" aria-label="Localização">
+            <span>Procelbot</span><span class="breadcrumb-separator">/</span><strong>Control room</strong>
+          </div>
+          <div class="top-actions">
+            <div class="refresh-meta">
+              <span class="refresh-label">Próxima leitura</span>
+              <strong id="refresh-countdown">—</strong>
+            </div>
+            <button id="refresh-button" class="refresh-button" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-14.7-4.7L4 8"/><path d="M4 4v4h4M4 13a8.1 8.1 0 0 0 14.7 4.7L20 16"/><path d="M20 20v-4h-4"/></svg>
+              <span>Atualizar</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="content-wrap">
+          <section class="intro-row">
+            <div>
+              <p class="eyebrow">PROCELBOT / OPERAÇÃO</p>
+              <h1>Centro de controle</h1>
+              <p class="intro-copy">Uma leitura rápida da inferência local, da GPU e da saúde do runtime.</p>
+            </div>
+            <div id="connection-summary" class="connection-summary connection-pending" role="status" aria-live="polite">
+              <span id="connection-dot" class="connection-dot" aria-hidden="true"></span>
+              <span id="connection-message">Consultando o backend…</span>
+            </div>
+          </section>
+
+          <section class="hero-layout" aria-label="Estado da GPU">
+            <article class="gpu-hero panel-surface">
+              <div class="hero-topline">
+                <div>
+                  <span class="section-kicker">Inference node</span>
+                  <h2 id="hero-gpu-name">RTX 5090</h2>
+                </div>
+                <span id="service-status-pill" class="status-pill status-pending">Aguardando</span>
+              </div>
+              <div class="hero-main">
+                <div class="gpu-orbit" aria-hidden="true">
+                  <div class="orbit-ring orbit-ring-one"></div>
+                  <div class="orbit-ring orbit-ring-two"></div>
+                  <div class="gpu-chip">
+                    <svg viewBox="0 0 48 48" fill="none">
+                      <rect x="12" y="12" width="24" height="24" rx="3" stroke="currentColor" stroke-width="2"/>
+                      <path d="M18 18h12v12H18zM8 18h4M8 24h4M8 30h4M36 18h4M36 24h4M36 30h4M18 8v4M24 8v4M30 8v4M18 36v4M24 36v4M30 36v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                  </div>
+                </div>
+                <div class="hero-copy">
+                  <div class="hero-runtime-line"><span class="live-dot" aria-hidden="true"></span><span id="hero-runtime-state">Local inference online</span></div>
+                  <p id="service-name" class="hero-service">—</p>
+                  <div class="hero-model"><span>Modelo ativo</span><strong id="model-name">—</strong></div>
+                </div>
+              </div>
+              <div class="hero-stats">
+                <div class="hero-stat">
+                  <span>Temperatura</span>
+                  <strong id="hero-temp">—</strong>
+                  <small id="hero-temp-state">aguardando telemetria</small>
+                </div>
+                <div class="hero-stat">
+                  <span>Uso da GPU</span>
+                  <strong id="hero-util">—</strong>
+                  <small>processamento atual</small>
+                </div>
+                <div class="hero-stat">
+                  <span>Memória VRAM</span>
+                  <strong id="hero-memory">—</strong>
+                  <small id="hero-memory-state">aguardando telemetria</small>
+                </div>
+                <div class="hero-stat">
+                  <span>Potência</span>
+                  <strong id="hero-power">—</strong>
+                  <small>consumo instantâneo</small>
+                </div>
+              </div>
+            </article>
+
+            <aside class="signal-card panel-surface" aria-label="Sinal do runtime">
+              <div class="signal-heading"><span class="section-kicker">Runtime signal</span><span id="gpu-availability" class="signal-icon signal-pending">—</span></div>
+              <div class="signal-value" id="signal-value">—</div>
+              <p id="signal-status">Verificando disponibilidade do node.</p>
+              <div class="signal-line"><span>Provider</span><strong id="provider-name">—</strong></div>
+              <div class="signal-line"><span>Uptime</span><strong id="process-uptime">—</strong></div>
+              <div class="signal-line"><span>Última leitura</span><strong id="last-refresh">—</strong></div>
+            </aside>
+          </section>
+
+          <section class="summary-grid" aria-label="Resumo do runtime">
+            <article class="summary-card panel-surface">
+              <div class="summary-icon icon-blue" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h5M8 16h8"/></svg></div>
+              <div><span class="summary-label">Aplicação</span><strong id="service-status">—</strong><small id="service-status-detail">status do backend</small></div>
+            </article>
+            <article class="summary-card panel-surface">
+              <div class="summary-icon icon-purple" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/></svg></div>
+              <div><span class="summary-label">Provider</span><strong id="provider-summary">—</strong><small id="model-summary">modelo local</small></div>
+            </article>
+            <article class="summary-card panel-surface">
+              <div class="summary-icon icon-green" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v9l6 4M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z"/></svg></div>
+              <div><span class="summary-label">Snapshot do host</span><strong id="metrics-fresh">—</strong><small id="metrics-age">—</small></div>
+            </article>
+            <article class="summary-card panel-surface">
+              <div class="summary-icon icon-amber" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m13 2-9 12h7l-1 8 9-12h-7l1-8Z"/></svg></div>
+              <div><span class="summary-label">Uptime do processo</span><strong id="uptime-summary">—</strong><small>backend FastAPI</small></div>
+            </article>
+          </section>
+
+          <section class="dashboard-grid">
+            <article class="panel-surface detail-panel">
+              <div class="panel-heading">
+                <div><span class="section-kicker">Host resources</span><h2>Recursos do host</h2></div>
+                <span id="hostname" class="host-tag">—</span>
+              </div>
+              <div class="resource-list">
+                <div class="resource-row">
+                  <div class="resource-label"><span>CPU</span><strong id="cpu-value">—</strong></div>
+                  <div class="meter"><div id="cpu-meter" class="meter-fill meter-blue" role="progressbar" aria-label="Uso da CPU" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div></div>
+                </div>
+                <div class="resource-row">
+                  <div class="resource-label"><span>Memória</span><strong id="memory-value">—</strong></div>
+                  <div class="meter"><div id="memory-meter" class="meter-fill meter-purple" role="progressbar" aria-label="Uso da memória" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div></div>
+                </div>
+                <div class="resource-row">
+                  <div class="resource-label"><span>Disco raiz</span><strong id="disk-value">—</strong></div>
+                  <div class="meter"><div id="disk-meter" class="meter-fill meter-amber" role="progressbar" aria-label="Uso do disco raiz" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div></div>
+                </div>
+              </div>
+              <div class="host-footline"><span>Uptime do host</span><strong id="host-uptime">—</strong></div>
+            </article>
+
+            <article class="panel-surface detail-panel">
+              <div class="panel-heading">
+                <div><span class="section-kicker">Service mesh</span><h2>Dependências locais</h2></div>
+                <span class="panel-count" id="service-count">—</span>
+              </div>
+              <div id="services" class="service-list" aria-live="polite"><span class="empty-state">Sem snapshot disponível.</span></div>
+            </article>
+          </section>
+
+          <section class="panel-surface gpu-panel">
+            <div class="panel-heading">
+              <div><span class="section-kicker">GPU telemetry</span><h2>Telemetria detalhada</h2></div>
+              <span class="panel-note">coleta local · 30 s</span>
+            </div>
+            <div id="gpus" class="gpu-list" aria-live="polite"><span class="empty-state">Nenhuma GPU disponível para telemetria.</span></div>
+          </section>
+
+          <footer class="footer">
+            <span><span class="footer-pulse" aria-hidden="true"></span>Dados protegidos por Cloudflare Access</span>
+            <a href="/swagger">Abrir Swagger <span aria-hidden="true">↗</span></a>
+          </footer>
+        </div>
+      </main>
+    </div>
+    <script src="/admin.js" defer></script>
+  </body>
+</html>

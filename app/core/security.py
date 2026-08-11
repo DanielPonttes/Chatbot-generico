@@ -183,6 +183,15 @@ async def verify_admin_api_key(
             },
         )
 
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={
+                "error": "unauthorized",
+                "message": f"Header {API_KEY_HEADER_NAME} ausente ou inválido.",
+            },
+        )
+
     if _constant_time_key_match(api_key, settings.admin_api_key):
         return
 
@@ -258,6 +267,8 @@ def validate_runtime_security() -> None:
         problems.append("DOCS_PUBLIC=false")
     if settings.allow_model_override and not settings.allowed_models.strip():
         problems.append("ALLOWED_MODELS quando ALLOW_MODEL_OVERRIDE=true")
+    if settings.remote_pg_sslmode not in {"require", "verify-ca", "verify-full"}:
+        problems.append("REMOTE_PG_SSLMODE=require/verify-ca/verify-full")
     allowed_hosts = _csv_values(settings.allowed_hosts)
     if not allowed_hosts or "*" in allowed_hosts:
         problems.append("ALLOWED_HOSTS explícito e não vazio")

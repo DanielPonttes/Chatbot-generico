@@ -2,8 +2,8 @@
 
 set -eu
 
-if [ -z "${PROCELBOT_API_KEY:-}" ]; then
-    echo "PROCELBOT_API_KEY precisa estar configurada no proxy.env" >&2
+if [ -z "${PROCELBOT_API_KEY:-}" ] || [ -z "${PROCELBOT_ADMIN_API_KEY:-}" ]; then
+    echo "PROCELBOT_API_KEY e PROCELBOT_ADMIN_API_KEY precisam estar configuradas no proxy.env" >&2
     exit 1
 fi
 

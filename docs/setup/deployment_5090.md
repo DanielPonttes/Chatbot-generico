@@ -10,6 +10,7 @@ O Caddy continua sendo a única entrada pelo Tunnel:
 ```text
 api.procel-chatbot.com   → Caddy → chatbot:8000
 ollama.procel-chatbot.com → Caddy → ollama:11434
+admin.procel-chatbot.com → Caddy → painel + chatbot:8000
 ```
 
 ## Preparação
@@ -52,6 +53,11 @@ backend. O entrypoint encerra o Caddy se essa variável estiver ausente, para
 que o Swagger não pareça protegido pelo Basic Auth enquanto o FastAPI rejeita
 secretamente o header injetado.
 
+O painel também exige `PROCELBOT_ADMIN_API_KEY`, que deve repetir
+`ADMIN_API_KEY` do backend. Essa chave fica somente no `proxy.env` do host e é
+injetada pelo Caddy no upstream de `/api/status`; ela nunca deve aparecer nos
+assets estáticos ou no navegador.
+
 O hash Basic Auth do proxy fica no arquivo separado
 `/opt/procelbot/secrets/proxy-basic-auth.hash`, montado somente no container do
 Caddy. Não coloque o hash no `proxy.env`, pois os cifrões do bcrypt podem ser
@@ -69,6 +75,64 @@ O Basic Auth continua habilitado no endpoint público do Ollama para acessos
 externos. O suporte a gateway remoto protegido permanece disponível quando o
 backend for movido para outro host.
 
+No host da RTX 5090, o serviço `ollama` deve declarar tanto `gpus: all` quanto
+`runtime: nvidia` no Compose. O segundo campo é necessário neste Docker para
+que o Ollama receba as bibliotecas NVIDIA e não faça fallback silencioso para
+CPU. Depois de alterar essa configuração, recrie somente o serviço Ollama,
+preservando o volume `procelbot_ollama_models`:
+
+```bash
+sudo docker compose -f /opt/procelbot/compose.yaml \
+  up -d --force-recreate --no-deps ollama
+```
+
+Confirme `runtime=nvidia`, `ollama ps` com `size_vram > 0` e `nvidia-smi`
+durante uma geração. A porta `11434` não deve ter publicação no host.
+
+## Agente local de métricas
+
+O agente roda no próprio host da RTX 5090, com o usuário limitado
+`procelbot`. Ele não abre porta, não usa Gemini, não acessa o Docker socket e
+somente atualiza o snapshot `/var/lib/procelbot/node-metrics/latest.json` a
+cada 30 segundos. A consulta `nvidia-smi` lê telemetria do driver e não reserva
+VRAM nem executa inferência.
+
+Depois de sincronizar o checkout em `/opt/procelbot-backend`, instale o
+diretório de saída e o unit file:
+
+```bash
+sudo install -d -o procelbot -g procelbot -m 755 \
+  /var/lib/procelbot/node-metrics
+sudo chown root:root \
+  /opt/procelbot-backend/deploy/node_metrics/procelbot_node_metrics.py
+sudo chmod 755 \
+  /opt/procelbot-backend/deploy/node_metrics/procelbot_node_metrics.py
+sudo install -o root -g root -m 644 \
+  /opt/procelbot-backend/deploy/node_metrics/procelbot-node-metrics.service \
+  /etc/systemd/system/procelbot-node-metrics.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now procelbot-node-metrics.service
+```
+
+Recrie o container do backend para aplicar o bind mount somente leitura
+definido no compose:
+
+```bash
+sudo systemctl restart procelbot-backend.service
+```
+
+Valide o agente sem expor o conteúdo do arquivo em logs públicos:
+
+```bash
+sudo systemctl is-active procelbot-node-metrics.service
+sudo stat -c '%U:%G %a %n' /var/lib/procelbot/node-metrics/latest.json
+sudo python3 -m json.tool /var/lib/procelbot/node-metrics/latest.json >/dev/null
+```
+
+O backend aceita o snapshot por até 60 segundos. Se o agente parar, o campo
+`node_metrics.fresh` ficará falso quando o último snapshot for lido pelo
+endpoint administrativo.
+
 ## Publicação
 
 Instale o unit file e suba o backend:
@@ -80,31 +144,85 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now procelbot-backend.service
 ```
 
-Depois, recarregue o Caddy para aplicar a rota `api.procel-chatbot.com`:
+Sincronize os arquivos versionados da borda com a stack existente. Não copie
+`secrets/` do checkout: mantenha os segredos já instalados em `/opt/procelbot`.
+
+```bash
+cd /opt/procelbot-backend
+sudo install -o root -g procelbot -m 640 deploy/procelbot/Caddyfile \
+  /opt/procelbot/Caddyfile
+sudo install -o root -g procelbot -m 640 deploy/procelbot/compose.yaml \
+  /opt/procelbot/compose.yaml
+sudo install -o root -g root -m 644 deploy/procelbot/caddy-entrypoint.sh \
+  /opt/procelbot/caddy-entrypoint.sh
+```
+
+Depois, recrie somente o proxy para aplicar a rota `api.procel-chatbot.com`:
 
 ```bash
 sudo docker compose -f /opt/procelbot/compose.yaml up -d --force-recreate proxy
 ```
 
+O compose monta `deploy/procelbot/admin` em `/srv/admin` como somente leitura.
+O painel usa `/api/status` na mesma origem, enquanto `/swagger` e
+`/openapi.json` são proxied pelo Caddy com a chave pública da API.
+
 ## Cloudflare
 
-O Tunnel precisa de uma segunda aplicação/hostname apontando para:
+O Tunnel mantém a rota do Ollama e da API e recebe uma terceira entrada:
 
 ```text
-Hostname: api.procel-chatbot.com
+Hostname: admin.procel-chatbot.com
 Service:  http://localhost:80
 ```
 
 A rota existente de `ollama.procel-chatbot.com` permanece inalterada. Não
 crie uma rota apontando diretamente para `8000` ou `11434`.
 
+Crie uma aplicação Cloudflare Access do tipo `self-hosted` para
+`admin.procel-chatbot.com`, usando política `Allow` somente para a identidade
+administrativa definida na conta. One-time PIN é suficiente para a primeira
+versão; não use `Everyone` ou `Bypass`.
+
+No ingresso do Tunnel, habilite a validação de Access no origin com os valores
+da organização e da aplicação criada:
+
+```text
+originRequest.access.required: true
+originRequest.access.teamName: <TEAM_NAME>
+originRequest.access.audTag: [<ACCESS_APPLICATION_AUD_TAG>]
+```
+
+O `cloudflared` valida a assinatura e a audiência antes de chegar ao Caddy;
+este também responde 403 se o cabeçalho de asserção do Access não estiver
+presente.
+
+O DNS necessário é:
+
+```text
+Tipo: CNAME
+Nome: admin
+Destino: b89b38cd-58d4-4d41-8400-52d3107ee21d.cfargotunnel.com
+Proxy: Proxied
+TTL: Auto
+```
+
+O CNAME foi criado no dashboard e está publicado como registro de Tunnel
+proxied. O token Cloudflare atualmente usado pelo checkout continua sem
+`DNS Write`; para automatizar alterações futuras, use um token separado com
+escopo mínimo `Zone DNS Edit`.
+
 ## Validação
 
-Antes do Tunnel/DNS, valide a borda localmente no host da GPU:
+Antes do Tunnel/DNS, valide que a borda local bloqueia o painel sem a asserção
+do Access:
 
 ```bash
 curl --fail --resolve api.procel-chatbot.com:80:127.0.0.1 \
   http://api.procel-chatbot.com/v1/health
+test "$(curl -sS -o /dev/null -w '%{http_code}' \
+  --resolve admin.procel-chatbot.com:80:127.0.0.1 \
+  http://admin.procel-chatbot.com/)" = 403
 ```
 
 Depois de publicar o hostname no Cloudflare, valide pela URL pública:
@@ -113,7 +231,13 @@ Depois de publicar o hostname no Cloudflare, valide pela URL pública:
 curl --fail https://api.procel-chatbot.com/v1/health
 curl --fail https://api.procel-chatbot.com/v1/personas \
   -H 'X-API-Key: <API_KEY>'
+# Após autenticar no Access pelo navegador, abra:
+# https://admin.procel-chatbot.com/
 ```
+
+O smoke público atual deve mostrar redirecionamento 302 para o Cloudflare
+Access quando não há sessão. Após o login autorizado, o painel deve carregar
+e consultar `/api/status` sem enviar a `ADMIN_API_KEY` ao navegador.
 
 O health deve indicar `provider=ollama`, `model=gemma4:26b` e
 `provider_available=true`. Falhas de PostgreSQL ou Spring aparecem no bloco
@@ -121,3 +245,15 @@ O health deve indicar `provider=ollama`, `model=gemma4:26b` e
 
 Para Swagger, acesse `/docs` usando o mesmo usuário Basic Auth já configurado
 para o proxy do Ollama. A senha nunca deve ser colocada no Git ou no frontend.
+
+Para validar o endpoint administrativo direto, use a chave
+`ADMIN_API_KEY` somente de uma máquina de operação confiável:
+
+```bash
+curl --fail https://api.procel-chatbot.com/v1/admin/status \
+  -H 'X-API-Key: <ADMIN_API_KEY>'
+```
+
+Esse endpoint não deve ser chamado diretamente por um frontend público. O
+painel atrás do Cloudflare Access faz a chamada por proxy server-side, sem
+enviar a chave administrativa ao navegador.

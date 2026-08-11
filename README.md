@@ -427,6 +427,23 @@ curl -X PATCH http://localhost:8000/notifications/saved/{id} \
 
 | `GET` | `/integrations/context/people` | Autocomplete de pessoas. |
 
+As rotas canônicas abaixo exigem o header `X-API-Key` com `ADMIN_API_KEY` nesta
+fase; elas não aceitam somente a chave pública.
+
+| `GET` | `/v1/context/users/{user_id}/profile` | Perfil mínimo read-only. |
+
+| `GET` | `/v1/context/users/{user_id}/activities` | Atividades observadas. |
+
+| `GET` | `/v1/context/rooms/{room_id}/telemetry/latest` | Última telemetria da sala. |
+
+| `GET` | `/v1/context/sensors/{sensor_id}/telemetry/latest` | Última telemetria do sensor. |
+
+| `GET` | `/v1/context/rooms/{room_id}/presence` | Presença agregada da sala. |
+
+| `GET` | `/v1/context/missions` | Missões da fonte canônica. |
+
+| `GET` | `/v1/context/rules/parameter-definitions` | Definições de parâmetros. |
+
 
 
 ## Estrutura

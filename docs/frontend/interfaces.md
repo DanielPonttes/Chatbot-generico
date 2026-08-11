@@ -39,6 +39,7 @@ Esta tela testa o fluxo de notificacoes proativas e persiste feedback.
 
 - Dropdown de persona (`/personas`).
 - Dropdown de perfil-alvo (`/target-profiles`).
+- Catálogo de templates (`/notifications/types`).
 - Botao para gerar notificacao (`/chat/proactive`).
 - Botoes de aprovar/reprovar.
 - Modal de notificacoes salvas.
@@ -78,7 +79,11 @@ Payload enviado para `/chat/proactive`:
 }
 ```
 
-O backend tambem suporta `notification_type_id` e `notification_context`. A tela atual nao expoe um seletor dedicado para esses campos, mas o endpoint ja aceita o payload para integracoes futuras.
+O backend também suporta `notification_type_id` e `notification_context`. A
+integração deve consultar `/notifications/types` para descobrir os campos
+obrigatórios antes de montar o contexto. A tela atual ainda não expõe todas as
+64 missões do documento V3 como opções de UI; ela usa os templates técnicos
+reutilizáveis.
 
 ### Resultado
 
@@ -157,5 +162,8 @@ O teste mocka as rotas principais da tela de notificacoes, entao nao depende de 
 
 - As paginas estaticas usam chamadas relativas ao mesmo host do FastAPI.
 - `API_BASE` em `notifications.html` usa `window.location.origin`.
-- A autenticacao ainda nao existe; em producao, proteja os endpoints e restrinja CORS.
-- A tela de notificacoes ainda pode evoluir para expor `notification_type_id` e `notification_context` diretamente.
+- A chave da API não deve ser embutida no JavaScript do navegador; a proteção
+  deve ocorrer na borda/API (Cloudflare Access e/ou integração de backend).
+- A tela de notificações ainda pode evoluir para expor `notification_type_id`,
+  `notification_context` e um `mission_id` depois que o catálogo de missões for
+  normalizado.

@@ -22,12 +22,16 @@ services:
     environment:
       PYTHONUNBUFFERED: "1"
       PYTHONDONTWRITEBYTECODE: "1"
+      NODE_METRICS_PATH: /run/procelbot/node-metrics/latest.json
+      NODE_METRICS_MAX_AGE_SECONDS: "60"
     expose:
       - "8000"
     tmpfs:
       - /tmp
     volumes:
       - procelbot_chatbot_data:/app/data
+      # Snapshot gerado pelo agente do host; o backend só precisa ler.
+      - /var/lib/procelbot/node-metrics:/run/procelbot/node-metrics:ro
     networks:
       procelbot_internal:
         aliases:

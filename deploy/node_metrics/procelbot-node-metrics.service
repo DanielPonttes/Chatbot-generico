@@ -1,0 +1,24 @@
+[Unit]
+Description=Procelbot local host metrics agent
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=procelbot
+Group=procelbot
+ExecStart=/usr/bin/python3 /opt/procelbot-backend/deploy/node_metrics/procelbot_node_metrics.py --output /var/lib/procelbot/node-metrics/latest.json --interval 30
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/procelbot/node-metrics
+CapabilityBoundingSet=
+RestrictSUIDSGID=true
+LockPersonality=true
+UMask=0022
+
+[Install]
+WantedBy=multi-user.target

@@ -5,6 +5,7 @@ Serviço de Personas para mensagens proativas.
 import logging
 from dataclasses import dataclass
 from pathlib import Path
+from string import Formatter
 from typing import Any, Dict, List, Optional
 
 import yaml
@@ -49,6 +50,18 @@ class ProactiveMessageResult:
     prompt_used: str | None = None
 
 
+class PersonaNotFoundError(ValueError):
+    """A persona solicitada não existe no catálogo local."""
+
+
+class NotificationTypeNotFoundError(ValueError):
+    """O template de notificação solicitado não existe no catálogo local."""
+
+
+class NotificationContextValidationError(ValueError):
+    """O contexto não contém as variáveis exigidas pelo template."""
+
+
 # ---------------------------------------------------------------------------
 # NotificationType como Pydantic BaseModel
 # ---------------------------------------------------------------------------
@@ -76,6 +89,16 @@ class NotificationType(BaseModel):
         ...,
         min_length=1,
         description="Descrição do objetivo e caso de uso do tipo.",
+    )
+    category: str = Field(
+        ...,
+        min_length=1,
+        description="Categoria funcional do documento de notificações.",
+    )
+    subtype: str = Field(
+        ...,
+        min_length=1,
+        description="Subtipo funcional exibido para integrações.",
     )
     system_prompt_template: str = Field(
         ...,
@@ -137,6 +160,16 @@ class NotificationType(BaseModel):
                     f"mas não aparece no system_prompt_template como '{{{var}}}'."
                 )
         return self
+
+    @property
+    def context_variables(self) -> list[str]:
+        """Retorna os slots do prompt que podem ser preenchidos pelo contexto."""
+        variables = {
+            field_name.split(".", 1)[0].split("[", 1)[0]
+            for _, field_name, _, _ in Formatter().parse(self.system_prompt_template)
+            if field_name and field_name != "user_first_name_line"
+        }
+        return sorted(variables)
 
 
 # ---------------------------------------------------------------------------
@@ -357,7 +390,7 @@ class PersonaService:
         # 1. Resolve Persona
         persona = PersonaService.get_persona_by_id(persona_id)
         if not persona:
-            raise ValueError(f"Persona '{persona_id}' não encontrada.")
+            raise PersonaNotFoundError(f"Persona '{persona_id}' não encontrada.")
 
         persona_prompt = persona.system_prompt
         if persona_override and getattr(persona_override, "system_prompt", None):
@@ -370,14 +403,16 @@ class PersonaService:
         if notification_type_id:
             notif_type = PersonaService.get_notification_type_by_id(notification_type_id)
             if not notif_type:
-                raise ValueError(f"NotificationType '{notification_type_id}' não encontrado.")
+                raise NotificationTypeNotFoundError(
+                    f"NotificationType '{notification_type_id}' não encontrado."
+                )
 
             ctx = dict(notification_context or {})
 
             # Valida variáveis obrigatórias
             missing = [v for v in notif_type.required_context_vars if v not in ctx]
             if missing:
-                raise ValueError(
+                raise NotificationContextValidationError(
                     f"Variáveis obrigatórias ausentes para '{notification_type_id}': {missing}"
                 )
 

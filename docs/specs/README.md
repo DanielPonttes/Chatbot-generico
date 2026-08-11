@@ -21,8 +21,13 @@ o plano de rollback.
 
 | ID | Especificação | Status |
 | --- | --- | --- |
-| SPEC-001 | [Runtime local com Ollama e RTX 5090](01-runtime-local-ollama.md) | Draft |
+| SPEC-001 | [Runtime local com Ollama e RTX 5090](01-runtime-local-ollama.md) | In progress |
 | SPEC-002 | [Segurança e contratos da API pública](02-public-api-security-and-contracts.md) | Accepted |
+| SPEC-003 | [Observabilidade administrativa e plano de controle](03-admin-observability-and-control-plane.md) | Accepted |
+| SPEC-004 | [Agente local de métricas do host](04-local-node-metrics-agent.md) | Accepted |
+| SPEC-005 | [Painel administrativo e Cloudflare Access](05-admin-panel-and-cloudflare-access.md) | Accepted |
+| SPEC-006 | [Catálogo de missões e geração dedicada](06-notification-mission-catalog-and-generation.md) | Accepted |
+| SPEC-007 | [Contratos canônicos de contexto](07-canonical-data-contracts.md) | In progress |
 
 ## Ordem da primeira etapa
 

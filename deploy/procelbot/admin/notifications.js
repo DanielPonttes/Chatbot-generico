@@ -27,17 +27,32 @@
   const personaSelect = element("persona-select");
   const profileSelect = element("profile-select");
   const missionSelect = element("mission-select");
-  const missionSearch = element("mission-search");
   const contextFields = element("context-fields");
   const generateButton = element("generate-button");
   const generateButtonText = element("generate-button-text");
   const pushPreview = element("push-preview");
   const previewContent = element("preview-content");
   const historyList = element("history-list");
+  const workflowSteps = Array.from(document.querySelectorAll("[data-workflow-step]"));
+  const workflowLines = Array.from(document.querySelectorAll(".workflow-line"));
 
   const setText = (id, value) => {
     const node = element(id);
     if (node) node.textContent = value == null || value === "" ? "—" : String(value);
+  };
+
+  const setWorkflowStep = (currentStep) => {
+    workflowSteps.forEach((step) => {
+      const stepNumber = Number(step.dataset.workflowStep);
+      const isCurrent = stepNumber === currentStep;
+      step.classList.toggle("is-current", isCurrent);
+      step.classList.toggle("is-complete", stepNumber < currentStep);
+      if (isCurrent) step.setAttribute("aria-current", "step");
+      else step.removeAttribute("aria-current");
+    });
+    workflowLines.forEach((line, index) => {
+      line.classList.toggle("is-complete", index < currentStep - 1);
+    });
   };
 
   const normalize = (value) => String(value || "")
@@ -49,6 +64,60 @@
     const text = String(value || "").replace(/[_-]+/g, " ").trim();
     return text ? text.charAt(0).toUpperCase() + text.slice(1) : "Campo";
   };
+
+  const CONTEXT_DESCRIPTIONS = Object.freeze({
+    user_first_name: "Nome fictício usado para personalizar a saudação.",
+    room_id: "Identifica a sala ou ambiente associado ao alerta.",
+    presence_status: "Indica se o ambiente está ocupado, vazio ou em transição.",
+    luminosity_level: "Informa o nível de luminosidade observado no ambiente.",
+    time_window_elapsed: "Mostra há quanto tempo a condição foi observada.",
+    potential_wasted_kwh: "Estima a energia que pode ser desperdiçada, em kWh.",
+    lighting_power_delta: "Indica a variação de potência da iluminação, em W.",
+    current_lux_reading: "Mede a luminosidade atual do ambiente, em lux.",
+    target_lux_range: "Faixa de luminosidade considerada adequada para a atividade.",
+    current_progress_percent: "Percentual de progresso já alcançado na missão.",
+    recommended_temperature_range: "Faixa de temperatura sugerida para o ambiente.",
+    user_setpoint_input: "Temperatura configurada pelo usuário no equipamento.",
+    external_temperature: "Temperatura medida do lado de fora do ambiente.",
+    internal_temperature: "Temperatura medida dentro do ambiente.",
+    humidity_external: "Umidade relativa medida no lado de fora.",
+    external_humidity: "Umidade relativa medida no lado de fora.",
+    consumption_average_kwh: "Consumo médio do período, em kWh.",
+    measured_consumption_kwh: "Consumo medido no cenário, em kWh.",
+    expected_consumption_kwh: "Consumo esperado para comparar com o valor medido.",
+    historical_baseline_kwh: "Referência histórica de consumo, em kWh.",
+    room_baseline_consumption: "Consumo de referência daquele ambiente.",
+    xp_reward: "Quantidade fictícia de pontos de experiência oferecida.",
+    coins_reward: "Quantidade fictícia de EcoCoins oferecida.",
+    coins_amount: "Quantidade de EcoCoins disponível para o usuário.",
+    streak_days: "Número de dias consecutivos na sequência atual.",
+    hours_remaining: "Horas restantes até o prazo do gatilho.",
+    expiry_deadline: "Data ou horário fictício de expiração.",
+    redemption_example: "Exemplo do benefício que pode ser resgatado.",
+    new_feature_name: "Nome da funcionalidade fictícia apresentada.",
+    new_feature_description: "Resumo curto da nova funcionalidade.",
+    welcome_back_reward: "Recompensa fictícia para o retorno do usuário.",
+    days_inactive: "Quantidade de dias desde o último acesso simulado.",
+    saving_goal_percent: "Meta de economia definida para o desafio, em percentual.",
+    reward_description: "Descrição da recompensa vinculada à missão.",
+    community_name: "Nome fictício da comunidade ou grupo de comparação.",
+    comparison_group: "Grupo usado como referência para a comparação.",
+    current_rank_percentile: "Percentil atual do usuário dentro do grupo.",
+    positions_gained: "Quantidade de posições avançadas no ranking.",
+    recommended_action: "Ação simples sugerida para o usuário realizar.",
+    target_action: "Ação que o gatilho espera que o usuário execute.",
+    target_device: "Equipamento envolvido na ação da notificação.",
+    target_time_window: "Janela de horário em que a ação deve acontecer.",
+    remaining_action: "Ação que ainda falta para concluir a missão.",
+    mission_name: "Nome da missão que será destacada na mensagem.",
+    badge_name: "Nome fictício da conquista desbloqueada.",
+    badge_description: "Descrição curta da conquista desbloqueada.",
+  });
+
+  const contextDescription = (key) => (
+    CONTEXT_DESCRIPTIONS[key]
+    || `Valor de ${humanize(key).toLowerCase()} usado para compor a mensagem.`
+  );
 
   const createSvg = (pathData) => {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -167,15 +236,11 @@
     return mission ? selectedById(state.types, mission.template_id) : null;
   };
 
-  const renderMissionOptions = (query = "") => {
+  const renderMissionOptions = () => {
     const previous = missionSelect.value;
-    const hadDraft = Array.from(contextFields.querySelectorAll("input"))
-      .some((input) => input.value.trim() !== "");
-    const needle = normalize(query);
     state.visibleMissions = state.missions.filter((mission) => {
       if (mission.execution_status !== "mapped_template" || !mission.template_id) return false;
-      if (!needle) return true;
-      return normalize([mission.name, mission.category, mission.subtype, mission.mission_id].join(" ")).includes(needle);
+      return true;
     });
 
     missionSelect.replaceChildren();
@@ -183,9 +248,6 @@
       appendOption(missionSelect, "", "Nenhuma missão encontrada");
       missionSelect.disabled = true;
       renderMission();
-      if (previous && hadDraft) {
-        toast("Rascunho limpo", "O filtro removeu a missão selecionada e seus valores de contexto.");
-      }
       return;
     }
 
@@ -208,9 +270,6 @@
     if (!missionSelect.value) missionSelect.value = state.visibleMissions[0].mission_id;
     const selectionChanged = missionSelect.value !== previous;
     if (selectionChanged) renderMission();
-    if (previous && selectionChanged && hadDraft) {
-      toast("Missão alterada", "Os valores do contexto anterior foram descartados.");
-    }
   };
 
   const requiredVariables = (mission, type) => {
@@ -274,6 +333,62 @@
     return "valor de demonstração";
   };
 
+  const randomUnit = () => {
+    if (window.crypto && typeof window.crypto.getRandomValues === "function") {
+      const values = new Uint32Array(1);
+      window.crypto.getRandomValues(values);
+      return values[0] / 0x100000000;
+    }
+    return Math.random();
+  };
+
+  const randomInt = (minimum, maximum) => Math.floor(randomUnit() * (maximum - minimum + 1)) + minimum;
+  const randomDecimal = (minimum, maximum, places = 1) => Number((minimum + randomUnit() * (maximum - minimum)).toFixed(places));
+  const randomChoice = (values) => values[Math.floor(randomUnit() * values.length)];
+
+  const randomContextValue = (key) => {
+    const textSamples = {
+      user_first_name: ["Ana", "Bruno", "Carla", "Diego", "Luiza", "Rafa"],
+      presence_status: ["sala vazia", "ambiente ocupado", "transição de saída", "atividade reduzida"],
+      target_action: ["desligar a iluminação ao sair", "ajustar o ar-condicionado", "confirmar o encerramento da sala"],
+      recommended_action: ["verificar luzes e ar-condicionado", "reduzir o setpoint em 1 °C", "encerrar os equipamentos ao sair"],
+      target_time_window: ["agora", "hoje, das 18h às 21h", "nos próximos 15 minutos", "antes do fim da aula"],
+      time_window_elapsed: ["últimos 15 minutos", "última hora", "últimos 30 minutos", "desde o início da aula"],
+      expiry_deadline: ["hoje às 18h", "sexta-feira às 18h", "amanhã às 12h", "domingo à meia-noite"],
+      target_lux_range: ["300–500 lux", "250–450 lux", "350–550 lux"],
+      recommended_temperature_range: ["23 °C–25 °C", "22 °C–24 °C", "24 °C–26 °C"],
+      reward_description: ["100 EcoCoins", "um selo de eficiência", "bônus de 50 pontos"],
+      redemption_example: ["um kit de lâmpadas LED", "um cupom de economia", "uma nova badge"],
+      new_feature_name: ["Mapa de Economia", "Painel de Ambientes", "Desafio Relâmpago"],
+      new_feature_description: ["comparativo semanal por ambiente", "visão rápida do consumo", "missão de cinco minutos"],
+      welcome_back_reward: ["50 EcoCoins", "uma badge de retorno", "100 pontos de experiência"],
+      community_name: ["usuários do campus", "sua turma", "moradores do prédio"],
+      comparison_group: ["seu andar", "turmas semelhantes", "usuários do campus"],
+      status_iluminacao: ["ligada", "desligada", "em modo econômico"],
+      door_window_sensor_status: ["fechado", "aberto", "sem alteração"],
+      shift_label: ["manhã", "tarde", "noite"],
+      period_label: ["esta semana", "últimas 24 horas", "este mês"],
+      interval_time_window: ["10 minutos", "15 minutos", "30 minutos"],
+      target_device: ["iluminação", "ar-condicionado", "equipamento da sala"],
+    };
+
+    if (Object.prototype.hasOwnProperty.call(textSamples, key)) return randomChoice(textSamples[key]);
+    if (key === "room_id") return `sala-demo-${randomInt(101, 799)}`;
+    if (key === "sensor_external_id") return `sensor-demo-${String(randomInt(1, 99)).padStart(2, "0")}`;
+    if (key.includes("lux")) return randomInt(220, 560);
+    if (key.includes("temperature")) return randomDecimal(19, 29, 1);
+    if (key.includes("humidity")) return randomInt(40, 78);
+    if (key.includes("kwh") || key.includes("consumption")) return randomDecimal(1.2, 12.8, 1);
+    if (key.includes("kw") || key.includes("power")) return randomDecimal(0.4, 4.8, 1);
+    if (key.includes("percent") || key.includes("percentage")) return randomInt(8, 94);
+    if (key.includes("minutes")) return randomInt(5, 90);
+    if (key.includes("hours")) return randomInt(1, 12);
+    if (key.includes("days") || key.includes("weeks") || key.includes("count")) return randomInt(2, 28);
+    if (key.includes("rank") || key.includes("position")) return randomInt(2, 48);
+    if (looksNumeric(key)) return randomInt(5, 100);
+    return `${humanize(key)} fictício ${randomInt(100, 999)}`;
+  };
+
   const createContextField = (key, required) => {
     const wrapper = document.createElement("label");
     wrapper.className = "context-field";
@@ -293,13 +408,19 @@
     input.type = looksNumeric(key) ? "number" : "text";
     input.step = "any";
     input.dataset.contextValue = key;
-    input.placeholder = String(sampleValue(key));
+    input.placeholder = `Ex.: ${sampleValue(key)}`;
     input.required = required;
     input.autocomplete = "off";
 
     const hint = document.createElement("small");
-    hint.textContent = key;
-    wrapper.append(heading, input, hint);
+    hint.className = "field-hint";
+    hint.id = `hint-${key.replace(/[^a-z0-9_-]/gi, "-")}`;
+    hint.textContent = contextDescription(key);
+    input.setAttribute("aria-describedby", hint.id);
+    const technicalKey = document.createElement("small");
+    technicalKey.className = "field-key";
+    technicalKey.textContent = `Chave técnica: ${key}`;
+    wrapper.append(heading, input, hint, technicalKey);
     return wrapper;
   };
 
@@ -336,6 +457,8 @@
     element("rag-toggle").checked = Boolean(type && type.default_use_rag);
     generateButton.disabled = !mission || !personaSelect.value;
     renderContextFields();
+    if (mission && personaSelect.value) setWorkflowStep(2);
+    else setWorkflowStep(1);
   };
 
   const addCustomField = () => {
@@ -358,7 +481,9 @@
     keyInput.placeholder = "ex.: campaign_label";
     keyInput.pattern = "[a-z][a-z0-9_]*";
     keyInput.autocomplete = "off";
-    keyLabel.append(keyTitle, keyInput);
+    const keyHint = document.createElement("small");
+    keyHint.textContent = "Nome curto usado pelo template.";
+    keyLabel.append(keyTitle, keyInput, keyHint);
 
     const valueLabel = document.createElement("label");
     valueLabel.className = "field-control";
@@ -369,7 +494,9 @@
     valueInput.dataset.customValue = "true";
     valueInput.placeholder = "valor de demonstração";
     valueInput.autocomplete = "off";
-    valueLabel.append(valueTitle, valueInput);
+    const valueHint = document.createElement("small");
+    valueHint.textContent = "Dado inventado para esta simulação.";
+    valueLabel.append(valueTitle, valueInput, valueHint);
 
     const removeButton = document.createElement("button");
     removeButton.className = "remove-field";
@@ -383,14 +510,27 @@
     keyInput.focus();
   };
 
-  const fillDemoValues = () => {
+  const randomizeScenario = () => {
+    if (!state.personas.length || !state.visibleMissions.length) {
+      toast("Catálogo indisponível", "Aguarde o carregamento das opções para gerar um cenário.", "error");
+      return;
+    }
+
+    personaSelect.value = randomChoice(state.personas).id;
+    if (state.profiles.length) profileSelect.value = randomChoice(state.profiles).id;
+    missionSelect.value = randomChoice(state.visibleMissions).mission_id;
+    updatePersonaDescription();
+    updateProfileDescription();
+    renderMission();
+
     contextFields.querySelectorAll("[data-context-value]").forEach((input) => {
-      input.value = String(sampleValue(input.dataset.contextValue));
+      input.value = String(randomContextValue(input.dataset.contextValue));
     });
     contextFields.querySelectorAll("[data-custom-value]").forEach((input) => {
-      if (!input.value) input.value = "valor de demonstração";
+      input.value = `valor fictício ${randomInt(100, 999)}`;
     });
-    toast("Cenário preenchido", "Revise os valores fictícios antes de gerar.", "success");
+    element("rag-toggle").checked = randomUnit() >= 0.5;
+    toast("Cenário aleatório pronto", "Persona, missão e contexto foram sorteados. Revise antes de gerar.", "success");
   };
 
   const clearContext = () => {
@@ -446,6 +586,8 @@
     generateButton.classList.toggle("is-loading", loading);
     generateButtonText.textContent = loading ? "Gerando no modelo local…" : "Gerar candidata";
     form.setAttribute("aria-busy", String(loading));
+    if (loading) setWorkflowStep(2);
+    else if (state.currentNotification) setWorkflowStep(3);
   };
 
   const updatePreview = (notification) => {
@@ -463,7 +605,8 @@
     setText("preview-model", state.currentNotification.model);
     setText("preview-length", content.length);
     setText("preview-state", state.currentNotification.type);
-    element("preview-state").className = `preview-state${state.currentNotification.type === "Pendente" ? " is-live" : ""}`;
+    element("preview-state").className = `preview-state ${statusClass(state.currentNotification.type)}`;
+    setWorkflowStep(3);
     pushPreview.classList.remove("has-message");
     window.requestAnimationFrame(() => pushPreview.classList.add("has-message"));
     updatePreviewActions();
@@ -474,7 +617,10 @@
       ? state.saved.find((item) => item.id === state.currentNotification.id)
       : null;
     const enabled = Boolean(persisted && persisted.type === "Pendente");
-    document.querySelectorAll("[data-preview-review]").forEach((button) => { button.disabled = !enabled; });
+    document.querySelectorAll("[data-preview-review]").forEach((button) => {
+      button.disabled = !enabled;
+      button.title = enabled ? `Marcar como ${button.dataset.previewReview.toLowerCase()}` : "Gere uma candidata para registrar o parecer";
+    });
   };
 
   const generateNotification = async (event) => {
@@ -514,6 +660,10 @@
       setStudioStatus("ready", "Candidata gerada e salva como pendente");
       toast("Candidata pronta", "Revise a experiência no celular e registre seu parecer.", "success");
       await loadHistory(false);
+      if (window.matchMedia("(max-width: 900px)").matches) {
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        window.setTimeout(() => element("preview-panel")?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" }), 0);
+      }
     } catch (error) {
       setStudioStatus("error", "Falha na geração da candidata");
       toast("Não foi possível gerar", error.message, "error");
@@ -538,7 +688,7 @@
       if (state.currentNotification && state.currentNotification.id === id) {
         state.currentNotification.type = type;
         setText("preview-state", type);
-        element("preview-state").className = "preview-state";
+        element("preview-state").className = `preview-state ${statusClass(type)}`;
         updatePreviewActions();
       }
       await loadHistory(false);
@@ -583,8 +733,12 @@
     notifications.forEach((notification) => {
       const row = document.createElement("article");
       row.className = "history-row";
-      const copy = document.createElement("div");
+      row.dataset.notificationId = notification.id || "";
+      const openPreview = () => updatePreview(notification);
+      const copy = document.createElement("button");
+      copy.type = "button";
       copy.className = "history-copy";
+      copy.addEventListener("click", openPreview);
       const content = document.createElement("p");
       const date = document.createElement("small");
       content.textContent = notification.content;
@@ -695,8 +849,7 @@
   personaSelect.addEventListener("change", updatePersonaDescription);
   profileSelect.addEventListener("change", updateProfileDescription);
   missionSelect.addEventListener("change", renderMission);
-  missionSearch.addEventListener("input", () => renderMissionOptions(missionSearch.value));
-  element("fill-demo-button").addEventListener("click", fillDemoValues);
+  element("randomize-button").addEventListener("click", randomizeScenario);
   element("clear-context-button").addEventListener("click", clearContext);
   element("add-context-button").addEventListener("click", addCustomField);
   element("history-filter").addEventListener("change", renderHistory);

@@ -24,7 +24,7 @@
 
         <div class="sidebar-section-label">Monitoramento</div>
         <nav class="nav-list" aria-label="Monitoramento">
-          <a class="nav-item" href="/">
+          <a class="nav-item" href="/" aria-label="Visão geral">
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
             <span>Visão geral</span>
           </a>
@@ -32,11 +32,11 @@
 
         <div class="sidebar-section-label sidebar-lab-label">Laboratório</div>
         <nav class="nav-list" aria-label="Laboratório">
-          <a class="nav-item is-active" href="/notifications" aria-current="page">
+          <a class="nav-item is-active" href="/notifications" aria-current="page" aria-label="Notificações">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
             <span>Notificações</span>
           </a>
-          <a class="nav-item" href="/swagger">
+          <a class="nav-item" href="/swagger" aria-label="API e Swagger">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/><path d="M14 3h7v7M10 14 21 3"/></svg>
             <span>API &amp; Swagger</span>
           </a>
@@ -69,7 +69,7 @@
             </div>
             <div class="safety-seal" aria-label="Modo seguro de demonstração">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 20 7v5c0 5-3.4 8-8 9-4.6-1-8-4-8-9V7l8-4Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg>
-              <span><strong>Modo demonstração</strong><small>contexto manual · fonte real desligada</small></span>
+              <span><strong>Modo demonstração</strong><small>dados fictícios · nenhuma entrega real</small></span>
             </div>
           </section>
 
@@ -89,18 +89,18 @@
           </section>
 
           <section class="workflow-rail" aria-label="Etapas do fluxo">
-            <div class="workflow-step is-current"><span>1</span><strong>Configure</strong><small>tom e missão</small></div>
+            <div class="workflow-step is-current" data-workflow-step="1" aria-current="step"><span>1</span><strong>Configurar</strong><small>tom e missão</small></div>
             <div class="workflow-line" aria-hidden="true"></div>
-            <div class="workflow-step"><span>2</span><strong>Emule</strong><small>contexto fictício</small></div>
+            <div class="workflow-step" data-workflow-step="2"><span>2</span><strong>Emular</strong><small>contexto fictício</small></div>
             <div class="workflow-line" aria-hidden="true"></div>
-            <div class="workflow-step"><span>3</span><strong>Revise</strong><small>aprovar ou rejeitar</small></div>
+            <div class="workflow-step" data-workflow-step="3"><span>3</span><strong>Revisar</strong><small>aprovar ou rejeitar</small></div>
           </section>
 
           <section class="studio-grid">
             <form id="notification-form" class="composer panel-surface" novalidate>
               <div class="panel-heading studio-panel-heading">
-                <div><span class="section-kicker">Campaign builder</span><h2>Monte o cenário</h2></div>
-                <span class="lab-chip">LAB / MANUAL</span>
+                <div><span class="section-kicker">Montagem da campanha</span><h2>Configure a candidata</h2></div>
+                <span class="lab-chip">DADOS FICTÍCIOS</span>
               </div>
 
               <fieldset class="form-section">
@@ -108,13 +108,13 @@
                 <div class="field-grid two-columns">
                   <label class="field-control">
                     <span>Persona do bot</span>
-                    <select id="persona-select" required disabled><option>Carregando…</option></select>
-                    <small id="persona-description">Define o tom editorial da mensagem.</small>
+                    <select id="persona-select" required disabled aria-describedby="persona-description"><option>Carregando…</option></select>
+                    <small id="persona-description">Escolha a personalidade que vai escrever a notificação.</small>
                   </label>
                   <label class="field-control">
                     <span>Perfil do público</span>
-                    <select id="profile-select" disabled><option>Carregando…</option></select>
-                    <small id="profile-description">Ajusta a abordagem ao comportamento simulado.</small>
+                    <select id="profile-select" disabled aria-describedby="profile-description"><option>Carregando…</option></select>
+                    <small id="profile-description">Escolha para quem a mensagem será simulada.</small>
                   </label>
                 </div>
               </fieldset>
@@ -122,15 +122,9 @@
               <fieldset class="form-section mission-section">
                 <legend><span>02</span> Missão</legend>
                 <label class="field-control">
-                  <span>Buscar no catálogo</span>
-                  <div class="search-control">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-                    <input id="mission-search" type="search" placeholder="Nome, categoria ou subtipo" autocomplete="off">
-                  </div>
-                </label>
-                <label class="field-control">
                   <span>Missão executável</span>
-                  <select id="mission-select" required disabled><option>Carregando catálogo…</option></select>
+                  <select id="mission-select" required disabled aria-describedby="mission-help"><option>Carregando catálogo…</option></select>
+                  <small id="mission-help">Selecione o objetivo da notificação. As opções estão agrupadas por categoria e já possuem um template pronto.</small>
                 </label>
                 <div id="mission-summary" class="mission-summary" aria-live="polite">
                   <div class="mission-summary-top"><span id="mission-category">Catálogo</span><strong id="mission-template">—</strong></div>
@@ -141,8 +135,8 @@
               <fieldset class="form-section context-section">
                 <legend><span>03</span> Contexto fictício</legend>
                 <div class="context-toolbar">
-                  <p>Os campos vêm do contrato da missão. Use somente valores inventados.</p>
-                  <button id="fill-demo-button" class="text-button" type="button">Preencher exemplo</button>
+                  <p>Explique o cenário que dispara a mensagem. Cada campo mostra o formato esperado; use somente valores inventados.</p>
+                  <button id="randomize-button" class="text-button secondary-button" type="button">Gerar cenário aleatório</button>
                 </div>
                 <div id="context-fields" class="context-fields" aria-live="polite">
                   <p class="empty-state">Selecione uma missão para montar o contexto.</p>
@@ -176,9 +170,9 @@
             </form>
 
             <aside class="preview-column">
-              <article class="preview-panel panel-surface">
+              <article id="preview-panel" class="preview-panel panel-surface">
                 <div class="panel-heading studio-panel-heading">
-                  <div><span class="section-kicker">Live preview</span><h2>Experiência no celular</h2></div>
+                  <div><span class="section-kicker">Prévia no celular</span><h2>Veja antes de revisar</h2></div>
                   <span id="preview-state" class="preview-state">Rascunho</span>
                 </div>
 
@@ -212,11 +206,11 @@
                 </div>
 
                 <div class="review-actions" id="preview-review-actions">
-                  <button class="review-button reject" type="button" data-preview-review="Reprovada" disabled>
+                  <button class="review-button reject" type="button" data-preview-review="Reprovada" title="Gere uma candidata para registrar o parecer" disabled>
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
                     Reprovar
                   </button>
-                  <button class="review-button approve" type="button" data-preview-review="Aprovada" disabled>
+                  <button class="review-button approve" type="button" data-preview-review="Aprovada" title="Gere uma candidata para registrar o parecer" disabled>
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>
                     Aprovar
                   </button>
@@ -232,7 +226,7 @@
 
           <section class="history-panel panel-surface" aria-labelledby="history-title">
             <div class="history-heading">
-              <div><span class="section-kicker">Review queue</span><h2 id="history-title">Histórico de candidatas</h2></div>
+              <div><span class="section-kicker">Fila de revisão</span><h2 id="history-title">Histórico de candidatas</h2></div>
               <div class="history-controls">
                 <label><span class="sr-only">Filtrar histórico</span><select id="history-filter"><option value="all">Todos os estados</option><option value="Pendente">Pendentes</option><option value="Aprovada">Aprovadas</option><option value="Reprovada">Reprovadas</option></select></label>
                 <button id="refresh-history-button" class="ghost-button" type="button">

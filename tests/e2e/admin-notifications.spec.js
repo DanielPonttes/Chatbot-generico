@@ -142,21 +142,19 @@ test.describe('Admin Notification Studio', () => {
     await expect(page.locator('#mission-select option')).toHaveCount(1);
     await expect(page.locator('[data-context-value="room_id"]')).toBeVisible();
 
-    await page.click('#fill-demo-button');
+    await page.click('#randomize-button');
     await page.click('#generate-button');
 
     await expect.poll(() => captures.generated.length).toBe(1);
     expect(captures.generated[0]).toMatchObject({
       mission_id: 'sala_vazia_luz_off',
-      persona_id: 'motivador',
-      target_profile_id: 'engajado',
       use_canonical_context: false,
-      notification_context: {
-        room_id: 'sala-demo-204',
-        potential_wasted_kwh: 3.2,
-        presence_status: 'sala vazia',
-      },
     });
+    expect(['motivador', 'provocador']).toContain(captures.generated[0].persona_id);
+    expect(['engajado', 'gastao']).toContain(captures.generated[0].target_profile_id);
+    expect(captures.generated[0].notification_context.room_id).toMatch(/^sala-demo-\d+$/);
+    expect(typeof captures.generated[0].notification_context.potential_wasted_kwh).toBe('number');
+    expect(typeof captures.generated[0].notification_context.presence_status).toBe('string');
     await expect(page.locator('#preview-content')).toContainText('Sala demo 204 vazia');
     await expect(page.locator('#history-list')).toContainText('Sala demo 204 vazia');
 
@@ -166,15 +164,16 @@ test.describe('Admin Notification Studio', () => {
     await expect(page.locator('#history-list')).toContainText('Aprovada');
   });
 
-  test('permanece utilizável em viewport móvel e filtra missões', async ({ page }) => {
+  test('permanece utilizável em viewport móvel e explica os campos', async ({ page }) => {
     await serveAssets(page);
     await mockApi(page);
     await page.setViewportSize({ width: 390, height: 844 });
 
     await page.goto('/notifications.html');
-    await page.fill('#mission-search', 'inexistente');
-    await expect(page.locator('#mission-select')).toBeDisabled();
-    await expect(page.locator('#generate-button')).toBeDisabled();
+    await expect(page.locator('#mission-search')).toHaveCount(0);
+    await expect(page.locator('#mission-select')).toBeEnabled();
+    await expect(page.locator('#mission-help')).toContainText('objetivo da notificação');
+    await expect(page.locator('.context-field[data-context-key="room_id"] .field-hint')).toContainText('Identifica a sala');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
   });
 
@@ -195,7 +194,7 @@ test.describe('Admin Notification Studio', () => {
     const captures = await mockApi(page);
 
     await page.goto('/notifications.html');
-    await page.click('#fill-demo-button');
+    await page.click('#randomize-button');
     await page.click('#generate-button');
     await expect(page.locator('[data-preview-review="Reprovada"]')).toBeEnabled();
     await page.click('[data-preview-review="Reprovada"]');
@@ -213,7 +212,7 @@ test.describe('Admin Notification Studio', () => {
     const captures = await mockApi(page, { reviewStatus: 500 });
 
     await page.goto('/notifications.html');
-    await page.click('#fill-demo-button');
+    await page.click('#randomize-button');
     await page.click('#generate-button');
     await expect(page.locator('[data-preview-review="Aprovada"]')).toBeEnabled();
     await page.click('[data-preview-review="Aprovada"]');
@@ -221,5 +220,23 @@ test.describe('Admin Notification Studio', () => {
     await expect.poll(() => captures.reviews.length).toBe(1);
     await expect(page.locator('#toast-region')).toContainText('Falha na revisão');
     await expect(page.locator('#history-list')).toContainText('Pendente');
+  });
+
+  test('abre a candidata pela fila sem quebrar revisão por teclado', async ({ page }) => {
+    await serveAssets(page);
+    const captures = await mockApi(page);
+
+    await page.goto('/notifications.html');
+    await page.click('#randomize-button');
+    await page.click('#generate-button');
+    await expect(page.locator('.history-copy')).toContainText('Sala demo 204 vazia');
+
+    await page.click('.history-copy');
+    await expect(page.locator('#preview-content')).toContainText('Sala demo 204 vazia');
+
+    await page.locator('.history-action.approve').focus();
+    await page.keyboard.press('Enter');
+    await expect.poll(() => captures.reviews.length).toBe(1);
+    expect(captures.reviews[0]).toEqual({ id: 'candidate-1', type: 'Aprovada' });
   });
 });

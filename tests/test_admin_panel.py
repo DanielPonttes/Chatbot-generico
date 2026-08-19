@@ -22,6 +22,8 @@ def test_admin_panel_uses_same_origin_server_side_routes():
     assert 'fetch("/api/status"' in javascript
     assert 'href="/swagger"' in html
     assert 'href="/notifications"' in html
+    assert 'href="/notifications/docs"' in html
+    assert 'id="docs-launch-title"' in html
 
 
 def test_admin_assets_remain_local_and_dom_safe():

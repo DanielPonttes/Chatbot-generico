@@ -92,6 +92,9 @@ button { font: inherit; }
 .breadcrumbs strong { color: var(--muted); font-weight: 650; }
 .breadcrumb-separator { color: #355365; }
 .top-actions { display: flex; align-items: center; gap: 16px; }
+.docs-launch { display: inline-flex; align-items: center; gap: 8px; min-height: 37px; padding: 0 12px; border: 1px solid rgba(169, 139, 255, .34); border-radius: 9px; background: rgba(120, 95, 204, .11); color: #c3b8ff; font-size: 11px; font-weight: 750; }
+.docs-launch svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
+.docs-launch:hover { border-color: rgba(169, 139, 255, .68); background: rgba(120, 95, 204, .2); color: #f0edff; }
 .refresh-meta { display: grid; gap: 1px; text-align: right; }
 .refresh-meta strong { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .refresh-button { display: inline-flex; align-items: center; gap: 8px; min-height: 37px; padding: 0 13px; border: 1px solid rgba(99, 201, 255, .35); border-radius: 9px; background: rgba(35, 115, 157, .18); color: var(--blue); cursor: pointer; font-size: 12px; font-weight: 750; transition: background .18s ease, border-color .18s ease, transform .18s ease; }
@@ -164,6 +167,15 @@ h2 { margin: 4px 0 0; font-size: 18px; letter-spacing: -.025em; }
 .summary-label { display: block; margin-bottom: 4px; }
 .summary-card strong { display: block; overflow: hidden; color: var(--text); font-size: 18px; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
 .summary-card small { display: block; overflow: hidden; color: var(--dim); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+
+.docs-launch-card { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; padding: 17px 19px; border-color: rgba(101, 216, 197, .2); background: linear-gradient(105deg, rgba(26, 80, 88, .32), rgba(18, 32, 52, .82)); }
+.docs-launch-icon { display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; border: 1px solid rgba(101, 216, 197, .35); border-radius: 12px; background: rgba(101, 216, 197, .1); color: var(--green); }
+.docs-launch-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.6; }
+.docs-launch-copy { min-width: 0; flex: 1; }
+.docs-launch-copy h2 { margin: 3px 0 4px; color: var(--text); font-size: 16px; }
+.docs-launch-copy p { margin: 0; overflow: hidden; color: var(--muted); font-size: 11px; line-height: 1.45; text-overflow: ellipsis; }
+.docs-card-action { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; min-height: 37px; padding: 0 12px; border: 1px solid rgba(101, 216, 197, .3); border-radius: 8px; background: rgba(42, 143, 134, .12); color: #9de5dc; font-size: 11px; font-weight: 800; }
+.docs-card-action:hover { border-color: rgba(101, 216, 197, .6); background: rgba(42, 143, 134, .22); color: #d0fff8; }
 
 .dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: 18px; margin-bottom: 18px; }
 .detail-panel, .gpu-panel { padding: 23px; }
@@ -240,12 +252,16 @@ body.is-offline .connection-summary { border-color: rgba(255, 126, 137, .32); }
   .topbar { align-items: flex-start; gap: 15px; padding: 16px 18px; }
   .breadcrumbs { display: none; }
   .top-actions { width: 100%; justify-content: flex-end; }
+  .docs-launch span { display: none; }
+  .docs-launch { padding: 0 10px; }
   .refresh-meta { display: none; }
   .content-wrap { padding: 30px 18px 22px; }
   .intro-row { align-items: flex-start; flex-direction: column; gap: 16px; margin-bottom: 23px; }
   .connection-summary { white-space: normal; }
   h1 { font-size: 34px; }
   .gpu-hero, .signal-card, .detail-panel, .gpu-panel { padding: 18px; }
+  .docs-launch-card { align-items: flex-start; flex-direction: column; gap: 11px; }
+  .docs-card-action { width: 100%; justify-content: center; }
   .hero-main { gap: 16px; min-height: 143px; }
   .gpu-orbit { width: 106px; height: 106px; flex-basis: 106px; }
   .gpu-chip { width: 64px; height: 64px; border-radius: 19px; }

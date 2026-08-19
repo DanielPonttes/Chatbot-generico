@@ -183,6 +183,16 @@ http://admin.procel-chatbot.com {
             file_server
         }
 
+        @notification_docs {
+            method GET HEAD
+            path /notifications/docs
+        }
+        handle @notification_docs {
+            rewrite * /notifications-docs.html
+            root * /srv/admin
+            file_server
+        }
+
         @admin_openapi {
             method GET
             path /openapi.json

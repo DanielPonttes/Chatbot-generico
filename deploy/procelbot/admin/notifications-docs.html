@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#071018">
+    <title>Procelbot · Documentação</title>
+    <link rel="stylesheet" href="/admin.css">
+    <link rel="stylesheet" href="/notifications.css">
+    <link rel="stylesheet" href="/documentation.css">
+  </head>
+  <body class="studio-page docs-page">
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegação principal">
+        <a class="brand" href="/" aria-label="Procelbot Control Room">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32" fill="none">
+              <path d="M16 3 27 9.3v13.4L16 29 5 22.7V9.3L16 3Z" stroke="currentColor" stroke-width="2"/>
+              <path d="m10.5 16 3.6 3.6 7.4-7.5" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span><strong>procelbot</strong><small>control room</small></span>
+        </a>
+
+        <div class="sidebar-section-label">Monitoramento</div>
+        <nav class="nav-list" aria-label="Monitoramento">
+          <a class="nav-item" href="/" aria-label="Visão geral">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+            <span>Visão geral</span>
+          </a>
+        </nav>
+
+        <div class="sidebar-section-label sidebar-lab-label">Laboratório</div>
+        <nav class="nav-list" aria-label="Laboratório">
+          <a class="nav-item" href="/notifications" aria-label="Notificações">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+            <span>Notificações</span>
+          </a>
+          <a class="nav-item is-active" href="/notifications/docs" aria-current="page" aria-label="Documentação">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M14 3v4h4M8 11h8M8 15h8M8 19h5"/></svg>
+            <span>Documentação</span>
+          </a>
+          <a class="nav-item" href="/swagger" aria-label="API e Swagger">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/><path d="M14 3h7v7M10 14 21 3"/></svg>
+            <span>API &amp; Swagger</span>
+          </a>
+        </nav>
+
+        <div class="sidebar-spacer"></div>
+        <div class="sidebar-footer">
+          <div class="access-badge"><span class="mini-dot" aria-hidden="true"></span> Access protegido</div>
+          <p>Contrato operacional <span>·</span> leitura segura</p>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar studio-topbar">
+          <div class="breadcrumbs" aria-label="Localização">
+            <span>Procelbot</span><span class="breadcrumb-separator">/</span><strong>Documentação</strong>
+          </div>
+          <a class="docs-toplink" href="/notifications"><span aria-hidden="true">←</span> Voltar ao Studio</a>
+        </header>
+
+        <div class="content-wrap docs-wrap">
+          <section class="docs-hero">
+            <div>
+              <p class="eyebrow">PROCELBOT / GUIA OPERACIONAL</p>
+              <h1>Documentação do laboratório</h1>
+              <p class="intro-copy">Entenda o fluxo de uma candidata, o significado de cada campo e os contratos usados para gerar e revisar notificações sem tocar em usuários reais.</p>
+              <div class="docs-hero-actions">
+                <a class="docs-button primary" href="/notifications">Abrir Notification Studio <span aria-hidden="true">→</span></a>
+                <a class="docs-button secondary" href="/swagger">Ver contrato da API <span aria-hidden="true">↗</span></a>
+              </div>
+            </div>
+            <aside class="docs-hero-note">
+              <span class="docs-note-icon" aria-hidden="true">i</span>
+              <div><strong>Ambiente de demonstração</strong><p>As candidatas usam contexto fictício e ficam pendentes até um parecer humano.</p></div>
+            </aside>
+          </section>
+
+          <div class="docs-layout">
+            <nav class="docs-toc panel-surface" aria-label="Nesta documentação">
+              <span class="docs-toc-label">Nesta página</span>
+              <a href="#visao-geral">Visão geral</a>
+              <a href="#fluxo">Fluxo em quatro passos</a>
+              <a href="#campos">Campos do formulário</a>
+              <a href="#contrato">Contrato da API</a>
+              <a href="#estados">Estados e revisão</a>
+              <a href="#seguranca">Segurança e limites</a>
+            </nav>
+
+            <div class="docs-content">
+              <section id="visao-geral" class="docs-section panel-surface">
+                <div class="docs-section-heading"><span class="section-kicker">01 / CONTEXTO</span><span class="docs-anchor">#visao-geral</span></div>
+                <h2>O que é o Notification Studio?</h2>
+                <p>É uma bancada protegida para simular notificações de eficiência energética. Você escolhe uma persona, um público e uma missão executável; o modelo local gera uma mensagem curta para inspeção no celular.</p>
+                <div class="docs-fact-grid">
+                  <div><span>Entrada</span><strong>Catálogo + contexto fictício</strong></div>
+                  <div><span>Saída</span><strong>Candidata pendente</strong></div>
+                  <div><span>Efeito externo</span><strong>Nenhum push é enviado</strong></div>
+                </div>
+              </section>
+
+              <section id="fluxo" class="docs-section panel-surface">
+                <div class="docs-section-heading"><span class="section-kicker">02 / OPERAÇÃO</span><span class="docs-anchor">#fluxo</span></div>
+                <h2>Fluxo em quatro passos</h2>
+                <div class="docs-step-grid">
+                  <article class="docs-step"><span>1</span><div><h3>Escolha a voz</h3><p>Persona define o tom; perfil do público ajusta a abordagem simulada.</p></div></article>
+                  <article class="docs-step"><span>2</span><div><h3>Selecione a missão</h3><p>Use apenas missões executáveis, agrupadas por categoria no seletor.</p></div></article>
+                  <article class="docs-step"><span>3</span><div><h3>Preencha o contexto</h3><p>Informe valores inventados. Campos obrigatórios aparecem marcados.</p></div></article>
+                  <article class="docs-step"><span>4</span><div><h3>Gere e revise</h3><p>Confira a prévia, depois marque a candidata como aprovada ou reprovada.</p></div></article>
+                </div>
+                <div class="docs-inline-callout"><strong>Atalho:</strong> “Gerar cenário aleatório” sorteia persona, perfil, missão, contexto e estado do RAG para explorações rápidas.</div>
+              </section>
+
+              <section id="campos" class="docs-section panel-surface">
+                <div class="docs-section-heading"><span class="section-kicker">03 / FORMULÁRIO</span><span class="docs-anchor">#campos</span></div>
+                <h2>Campos do formulário</h2>
+                <div class="docs-field-list">
+                  <article class="docs-field"><div class="docs-field-title"><strong>Persona do bot</strong><span class="docs-required">obrigatório</span></div><p>Personalidade que redige a candidata — por exemplo, motivadora ou provocadora.</p></article>
+                  <article class="docs-field"><div class="docs-field-title"><strong>Perfil do público</strong><span class="docs-optional">opcional</span></div><p>Perfil comportamental usado para adaptar o texto ao receptor simulado.</p></article>
+                  <article class="docs-field"><div class="docs-field-title"><strong>Missão executável</strong><span class="docs-required">obrigatório</span></div><p>Objetivo da notificação. O seletor mostra somente missões com template técnico mapeado.</p></article>
+                  <article class="docs-field"><div class="docs-field-title"><strong>Contexto fictício</strong><span class="docs-required">por missão</span></div><p>Variáveis que dão evidência ao template, como sala, presença, consumo e recompensa. Cada campo exibe sua explicação e a chave técnica.</p></article>
+                  <article class="docs-field"><div class="docs-field-title"><strong>Apoio do RAG</strong><span class="docs-optional">opcional</span></div><p>Permite usar conteúdo documental local quando o template recomenda. O sorteio aleatório pode alternar esse estado.</p></article>
+                  <article class="docs-field"><div class="docs-field-title"><strong>Fonte canônica</strong><span class="docs-locked">bloqueada</span></div><p>Permanece desativada no laboratório. Nenhum dado de pessoa, sala ou sensor real é consultado pelo formulário.</p></article>
+                </div>
+              </section>
+
+              <section id="contrato" class="docs-section panel-surface">
+                <div class="docs-section-heading"><span class="section-kicker">04 / INTEGRAÇÃO</span><span class="docs-anchor">#contrato</span></div>
+                <h2>Contrato da API</h2>
+                <p>O navegador usa somente os endpoints abaixo. O gateway injeta a chave administrativa no servidor; ela nunca aparece no HTML.</p>
+                <div class="docs-endpoints">
+                  <article><code>GET /v1/notifications/missions</code><span>Lista o catálogo e identifica missões executáveis.</span></article>
+                  <article><code>POST /v1/notifications/generate</code><span>O Studio gera e persiste uma candidata enviando <code>use_canonical_context=false</code>; a fonte canônica não é exposta no laboratório.</span></article>
+                  <article><code>GET /v1/notifications/saved</code><span>Carrega a fila de candidatas e seus pareceres.</span></article>
+                  <article><code>PATCH /v1/notifications/saved/{id}</code><span>Registra <code>Aprovada</code>, <code>Reprovada</code> ou <code>Pendente</code>.</span></article>
+                </div>
+              </section>
+
+              <section id="estados" class="docs-section panel-surface">
+                <div class="docs-section-heading"><span class="section-kicker">05 / GOVERNANÇA</span><span class="docs-anchor">#estados</span></div>
+                <h2>Estados e revisão humana</h2>
+                <div class="docs-status-list">
+                  <div><span class="docs-status pending">Pendente</span><p>A candidata acabou de ser gerada e aguarda decisão.</p></div>
+                  <div><span class="docs-status approved">Aprovada</span><p>O revisor considerou a mensagem adequada para o cenário simulado.</p></div>
+                  <div><span class="docs-status rejected">Reprovada</span><p>O revisor encontrou problema de conteúdo, tom ou contexto.</p></div>
+                </div>
+                <div class="docs-inline-callout"><strong>Regra:</strong> gerar não publica. A etapa de revisão é obrigatória e permanece separada de qualquer entrega real.</div>
+              </section>
+
+              <section id="seguranca" class="docs-section panel-surface">
+                <div class="docs-section-heading"><span class="section-kicker">06 / LIMITES</span><span class="docs-anchor">#seguranca</span></div>
+                <h2>Segurança e limites conhecidos</h2>
+                <ul class="docs-checklist">
+                  <li>O painel administrativo fica atrás do Cloudflare Access.</li>
+                  <li>Use valores inventados; não cole nomes, IDs ou leituras de pessoas reais.</li>
+                  <li>O contexto aceita até 32 chaves e o backend valida os campos exigidos pelo template.</li>
+                  <li>A chave da API e os segredos de infraestrutura ficam no servidor e no ambiente de deploy.</li>
+                  <li>Para detalhes de payload, respostas e códigos HTTP, consulte o Swagger protegido.</li>
+                </ul>
+                <div class="docs-final-actions"><a class="docs-button primary" href="/notifications">Voltar ao Studio <span aria-hidden="true">→</span></a><a class="docs-button secondary" href="/swagger">Abrir Swagger <span aria-hidden="true">↗</span></a></div>
+              </section>
+            </div>
+          </div>
+
+          <footer class="footer studio-footer docs-footer">
+            <span><span class="footer-pulse" aria-hidden="true"></span>Documentação operacional · dados fictícios</span>
+            <a href="/notifications">Notification Studio <span aria-hidden="true">↗</span></a>
+          </footer>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

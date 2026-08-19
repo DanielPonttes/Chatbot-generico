@@ -23,6 +23,16 @@ def test_cloudflare_access_gate_precedes_admin_upstreams():
     assert route.index("respond @admin_without_access 403") < route.index("handle @admin_swagger")
 
 
+def test_notification_documentation_is_served_by_the_access_gated_admin_site():
+    admin_site = _admin_site()
+    route_start = admin_site.index("route {")
+    route = admin_site[route_start:]
+
+    assert "path /notifications/docs" in route
+    assert "rewrite * /notifications-docs.html" in route
+    assert route.index("respond @admin_without_access 403") < route.index("handle @notification_docs")
+
+
 def test_proxy_origin_is_not_published_on_all_interfaces():
     compose = COMPOSE.read_text(encoding="utf-8")
 

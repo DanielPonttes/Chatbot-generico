@@ -530,7 +530,8 @@
       input.value = `valor fictício ${randomInt(100, 999)}`;
     });
     element("rag-toggle").checked = randomUnit() >= 0.5;
-    toast("Cenário aleatório pronto", "Persona, missão e contexto foram sorteados. Revise antes de gerar.", "success");
+    const ragState = element("rag-toggle").checked ? "RAG ativado" : "RAG desativado";
+    toast("Cenário aleatório pronto", `Persona, missão e contexto foram sorteados · ${ragState}. Revise antes de gerar.`, "success");
   };
 
   const clearContext = () => {
@@ -616,7 +617,8 @@
     const persisted = state.currentNotification
       ? state.saved.find((item) => item.id === state.currentNotification.id)
       : null;
-    const enabled = Boolean(persisted && persisted.type === "Pendente");
+    const locallyPending = Boolean(state.currentNotification && state.currentNotification.type === "Pendente");
+    const enabled = Boolean(locallyPending && (!persisted || persisted.type === "Pendente"));
     document.querySelectorAll("[data-preview-review]").forEach((button) => {
       button.disabled = !enabled;
       button.title = enabled ? `Marcar como ${button.dataset.previewReview.toLowerCase()}` : "Gere uma candidata para registrar o parecer";
